@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: wait(), notify() & Inter-Thread Communication</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Title & Syllabus</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Definitions</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Multithreading: wait(), notify() & Inter-Thread Communication</h1>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: -10px; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                <p><strong>Syllabus Coverage: Lectures 27–30</strong> (wait/notify Mechanics · wait vs sleep · Producer-Consumer Pattern · while loop with wait)</p>
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            
+            <p><strong>One-Sentence Definition:</strong><br>
+            <code>wait()</code> and <code>notify()</code> are the JVM's built-in signaling mechanism that allows threads sharing the same intrinsic lock to communicate — one thread voluntarily releases the lock and parks itself to sleep, while another thread does its work and then wakes the parked thread back up.</p>
+
+            <h3>The Architecture Analogy</h3>
+            <p>Picture a <strong>single shared photocopier</strong> in an office, with a sign-out sheet (the intrinsic lock) you must sign before using it. Two employees: Alice (Producer) and Bob (Consumer).</p>
+            <p>Alice arrives first, signs the sheet, and loads 100 pages into the feeder tray (fills the buffer). The tray is now full. Alice puts the copier in "ready to copy" mode and writes on a sticky note: <em>"Tray full — I'm stepping away. Wake me when it's empty."</em> She puts the sticky note on the machine and goes to the break room — but critically, she <strong>first returns the sign-out sheet</strong> (releases the lock). This is <code>wait()</code>.</p>
+            <p>Bob arrives, signs the sheet (acquires the lock), sees the tray full of loaded pages, and starts copying. When he's finished and the tray is empty, he writes on a sticky note: <em>"Tray empty — Alice can come back."</em> This is <code>notify()</code>. He then finishes whatever else he needs to do, returns the sign-out sheet, and leaves.</p>
+            <p>Alice is notified and returns to the copier, re-signs the sheet, checks the tray is indeed empty, and loads more pages. The cycle repeats.</p>
+            <p><strong>The critical difference from <code>sleep()</code>:</strong> When Alice uses <code>wait()</code>, she completely surrenders the sign-out sheet (the lock). Any other employee can use the copier. When she uses <code>sleep()</code>, she keeps the sign-out sheet in her pocket while she's in the break room — no one else can use the copier even though she's doing nothing.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <p>When a thread calls <code>obj.wait()</code>:</p>
+            <ol>
+                <li>The thread must already hold <code>obj</code>'s intrinsic lock (it must be inside <code>synchronized(obj)</code> or a synchronized method on <code>obj</code>). If not: <code>IllegalMonitorStateException</code> immediately.</li>
+                <li>The thread atomically <strong>releases</strong> <code>obj</code>'s monitor and moves itself into the <strong>wait set</strong> — a per-object data structure inside the JVM tracking threads waiting on that monitor.</li>
+                <li>The thread enters <code>WAITING</code> state (or <code>TIMED_WAITING</code> if <code>wait(timeout)</code> was used) — <strong>zero CPU consumption</strong>.</li>
+                <li>The thread stays in the wait set until another thread calls <code>obj.notify()</code> or <code>obj.notifyAll()</code> on the <strong>same object</strong>.</li>
+            </ol>
+            
+            <p>When another thread calls <code>obj.notify()</code>:</p>
+            <ol>
+                <li>The calling thread must also hold <code>obj</code>'s monitor.</li>
+                <li>The JVM picks one thread from <code>obj</code>'s wait set <strong>at random</strong> and marks it eligible to re-acquire the lock.</li>
+                <li>The notifying thread does <strong>not</strong> immediately release the lock — it finishes executing its synchronized block first. Only when it exits the synchronized block does the monitor become available.</li>
+                <li>The awakened thread competes to re-acquire the monitor. Once it does, it returns from <code>wait()</code> and continues.</li>
+            </ol>
+
+            <div class="highlight-box">
+                <p><strong>The spurious wakeup:</strong> The Java specification explicitly permits a thread to wake up from <code>wait()</code> without being notified. This is a known JVM/OS-level phenomenon. This is exactly why condition checks must be in a <code>while</code> loop, not an <code>if</code> statement.</p>
+            </div>
+
+            <h2 id="course-content">2. Course Content: Key Concepts & Definitions</h2>
+            
+            <h3><code>wait()</code> vs <code>sleep()</code> — The Fundamental Distinction</h3>
+            <p>These two methods both pause a thread, but they are fundamentally different in purpose, contract, and behavior:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th><code>Object.wait()</code></th>
+                        <th><code>Thread.sleep(ms)</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Called on</strong></td>
+                        <td>Any <code>Object</code> instance (<code>obj.wait()</code>)</td>
+                        <td>The <code>Thread</code> class statically (<code>Thread.sleep(ms)</code>)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Lock behavior</strong></td>
+                        <td><strong>Releases</strong> the intrinsic lock of the object it's called on</td>
+                        <td><strong>Does NOT release</strong> any locks the thread holds</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Requires synchronized?</strong></td>
+                        <td>Yes — must be inside <code>synchronized(obj)</code></td>
+                        <td>No — can be called anywhere</td>
+                    </tr>
+                    <tr>
+                        <td><strong>How to wake up</strong></td>
+                        <td><code>obj.notify()</code> or <code>obj.notifyAll()</code> from another thread</td>
+                        <td>Timer expires; or <code>thread.interrupt()</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Purpose</strong></td>
+                        <td>Thread coordination — "I'm done, someone else take over"</td>
+                        <td>Pure delay — "pause for a fixed time, then resume"</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Spurious wakeup</strong></td>
+                        <td>Yes — must use <code>while</code> loop for condition check</td>
+                        <td>No — always sleeps the full duration (unless interrupted)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Exception</strong></td>
+                        <td><code>InterruptedException</code> (thread can be interrupted while waiting)</td>
+                        <td><code>InterruptedException</code> (thread can be interrupted while sleeping)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+<pre><code>// sleep() — locks are HELD during pause
+synchronized (lock) {
+    Thread.sleep(5000);   // holds the lock for 5 full seconds
+                          // ALL other threads waiting on 'lock' are blocked for 5s
+}
+
+// wait() — lock is RELEASED during pause
+synchronized (lock) {
+    lock.wait();   // releases the lock immediately
+                   // other threads can now enter synchronized(lock) blocks
+                   // this thread parks with zero CPU until notified
+}</code></pre>
+
+            <h3>The <code>wait()</code> / <code>notify()</code> Contract — Three Rules</h3>
+            <p>These are absolute requirements. Violating any of them throws <code>IllegalMonitorStateException</code>:</p>
+            <ol>
+                <li><strong>Must be called on the same object that is locked:</strong> If you <code>synchronized(lockObj)</code>, you must call <code>lockObj.wait()</code> and <code>lockObj.notify()</code> — not <code>this.wait()</code> or any other object.</li>
+                <li><strong>Must be called from within a synchronized block or method:</strong> <code>wait()</code> and <code>notify()</code> cannot be called outside of a synchronized context on the same object.</li>
+                <li><strong><code>notify()</code> does not release the lock immediately:</strong> After calling <code>notify()</code>, the notifying thread completes the rest of its synchronized block before the monitor is released. The woken thread only gets to re-acquire the lock after the notifying thread exits the synchronized block.</li>
+            </ol>
+
+<pre><code>// CORRECT: synchronized on 'this', wait/notify called on 'this'
+public synchronized void produce() throws InterruptedException {
+    wait();     // ← called on 'this' (implicit), inside synchronized method on 'this'
+}
+public synchronized void consume() throws InterruptedException {
+    notify();   // ← called on 'this' (implicit), inside synchronized method on 'this'
+}
+
+// CORRECT: synchronized block form
+synchronized (sharedObj) {
+    sharedObj.wait();    // ← synchronized on sharedObj, wait called on sharedObj
+}
+synchronized (sharedObj) {
+    sharedObj.notify();  // ← same object
+}
+
+// WRONG — throws IllegalMonitorStateException
+notify();                        // not inside any synchronized block
+synchronized (lockA) { lockB.notify(); }  // synchronized on A, notifying on B</code></pre>
+
+            <h3>The Producer-Consumer Pattern with <code>synchronized</code> + <code>wait</code>/<code>notify</code></h3>
+            <p>This is the canonical use case for <code>wait()</code>/<code>notify()</code>. A producer thread fills a buffer; a consumer thread drains it. They must cooperate so that:</p>
+            <ul>
+                <li>The producer waits when the buffer is full</li>
+                <li>The consumer waits when the buffer is empty</li>
+            </ul>
+
+<pre><code>import java.util.LinkedList;
+import java.util.List;
+
+public class SharedBuffer {
+    private final List&lt;Integer&gt; buffer = new LinkedList&lt;&gt;();
+    private final int capacity;
+
+    public SharedBuffer(int capacity) {
+        this.capacity = capacity;
+    }
+
+    // Called by the producer thread
+    public synchronized void produce() throws InterruptedException {
+        // WHILE (not if) — because of spurious wakeups and multi-consumer scenarios
+        while (buffer.size() == capacity) {
+            System.out.println("[Producer] Buffer full — waiting");
+            wait();   // releases lock; parks until consumer calls notify()
+            // When we return here, we do NOT know the buffer is definitely not full
+            // — hence we re-check with the while loop
+        }
+
+        // Buffer has space — add items
+        for (int i = 0; i &lt; capacity; i++) {
+            buffer.add(i);
+            System.out.println("[Producer] Added: " + i);
+        }
+
+        notify();  // wake up a waiting consumer
+    }
+
+    // Called by the consumer thread
+    public synchronized void consume() throws InterruptedException {
+        // WHILE (not if) — guard against spurious wakeups
+        while (buffer.size() &lt; capacity) {
+            System.out.println("[Consumer] Buffer not full yet — waiting");
+            wait();   // releases lock; parks until producer calls notify()
+        }
+
+        // Buffer is full — drain it
+        while (!buffer.isEmpty()) {
+            int item = buffer.remove(0);
+            System.out.println("[Consumer] Removed: " + item);
+        }
+
+        notify();  // wake up the waiting producer
+    }
+}</code></pre>
+
+<pre><code>public class Main {
+    public static void main(String[] args) {
+        SharedBuffer buffer = new SharedBuffer(5);
+
+        Thread producer = new Thread(() -&gt; {
+            while (true) {
+                try {
+                    buffer.produce();
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }, "producer");
+
+        Thread consumer = new Thread(() -&gt; {
+            while (true) {
+                try {
+                    buffer.consume();
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }, "consumer");
+
+        producer.start();
+        consumer.start();
+    }
+}</code></pre>
+
+            <p><strong>Execution trace:</strong></p>
+<pre><code>[Producer] Added: 0, 1, 2, 3, 4    → notify() wakes consumer
+[Consumer] Removed: 0, 1, 2, 3, 4  → notify() wakes producer
+[Producer] Added: 0, 1, 2, 3, 4    → cycle repeats</code></pre>
+
+            <h3>Why <code>while</code> Instead of <code>if</code> — Three Reasons</h3>
+            <p>Joshua Bloch's <em>Effective Java</em> Item 81 mandates this. Here's exactly why:</p>
+            <p><strong>Reason 1: Spurious Wakeups</strong><br>
+            The JVM specification explicitly allows threads to wake from <code>wait()</code> without any <code>notify()</code> being called. This is an OS/hardware-level phenomenon. With an <code>if</code>, a spuriously woken thread proceeds as if notified — which could be incorrect. With a <code>while</code>, it re-checks the condition and goes back to waiting if the condition isn't actually met.</p>
+            <p><strong>Reason 2: Multi-Consumer / Multi-Producer Scenarios</strong><br>
+            With multiple consumer threads waiting:</p>
+            <ul>
+                <li>Producer calls <code>notifyAll()</code> — all consumers wake up</li>
+                <li>All consumers compete for the lock</li>
+                <li>First consumer gets the lock, sees buffer is full, drains it</li>
+                <li>Second consumer gets the lock — but the buffer is now empty! With <code>if</code>, it proceeds incorrectly. With <code>while</code>, it re-checks and waits again.</li>
+            </ul>
+            <p><strong>Reason 3: Notify Called Before the Thread Reaches <code>wait()</code></strong><br>
+            In poorly sequenced code, <code>notify()</code> can be called before the other thread reaches <code>wait()</code>. The <code>while</code> loop ensures the condition is always verified fresh, regardless of notification timing.</p>
+
+<pre><code>// WRONG — if statement
+if (buffer.size() == capacity) {
+    wait();   // spurious wakeup? proceeds with full buffer — bug
+}
+buffer.add(item);   // wrong: buffer may still be full!
+
+// CORRECT — while loop (Joshua Bloch's recommendation)
+while (buffer.size() == capacity) {
+    wait();   // spurious wakeup? re-checks — safely goes back to waiting
+}
+buffer.add(item);   // guaranteed: buffer is NOT full when we reach here</code></pre>
+
+            <h3><code>notify()</code> vs <code>notifyAll()</code></h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th><code>notify()</code></th>
+                        <th><code>notifyAll()</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>What it does</strong></td>
+                        <td>Wakes exactly one waiting thread (chosen randomly by JVM)</td>
+                        <td>Wakes all waiting threads on this object's monitor</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Performance</strong></td>
+                        <td>Better — only one thread wakes and competes</td>
+                        <td>Worse — all threads wake, only one gets the lock, rest go back to waiting</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Safety</strong></td>
+                        <td>Dangerous with multiple threads of different types</td>
+                        <td>Safe — each woken thread re-checks its condition</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Use when</strong></td>
+                        <td>All waiting threads are identical (pure producers or pure consumers)</td>
+                        <td>Multiple types of waiting threads — safer default</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>Rule of thumb:</strong> When in doubt, use <code>notifyAll()</code>. The performance difference is usually negligible, and it's much harder to reason about correctness bugs from under-notification than the overhead of extra wakeups.</p>
+
+            <h3>Limitations of the <code>synchronized</code> + <code>wait</code>/<code>notify</code> Approach</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Limitation</th>
+                        <th>Why It Matters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Non-deterministic thread selection</strong></td>
+                        <td><code>notify()</code> wakes a random waiting thread — no fairness. A thread can be indefinitely skipped (starved)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>No <code>tryLock()</code> equivalent</strong></td>
+                        <td>A thread trying to enter a synchronized block waits indefinitely — cannot specify a timeout or give up</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cannot interrupt a blocked thread</strong></td>
+                        <td>A thread blocked waiting to acquire a <code>synchronized</code> lock cannot be interrupted — it's stuck until the lock is released</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Single wait set per object</strong></td>
+                        <td>All threads waiting on an object share one wait set — you cannot have "wait for condition A" vs "wait for condition B" on the same lock</td>
+                    </tr>
+                    <tr>
+                        <td><strong>No explicit unlock</strong></td>
+                        <td>The lock is tied to the block scope — you cannot release it from a different method or code path</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>These limitations are exactly why <code>ReentrantLock</code> and <code>Condition</code> exist — they address each of these points explicitly.</p>
+
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation</h2>
+            
+            <h3>Complete Producer-Consumer with <code>notifyAll()</code> and Multiple Workers</h3>
+
+<pre><code>import java.util.ArrayDeque;
+import java.util.Queue;
+
+public class MultiWorkerBuffer {
+    private final Queue&lt;Integer&gt; buffer = new ArrayDeque&lt;&gt;();
+    private final int maxCapacity;
+    private volatile boolean shuttingDown = false;
+
+    public MultiWorkerBuffer(int maxCapacity) {
+        this.maxCapacity = maxCapacity;
+    }
+
+    // Called by producer threads
+    public synchronized void put(int item) throws InterruptedException {
+        while (buffer.size() &gt;= maxCapacity && !shuttingDown) {
+            wait();   // release lock, wait until consumer drains some items
+        }
+        if (shuttingDown) return;
+
+        buffer.offer(item);
+        System.out.printf("[%s] PUT %d (size=%d)%n",
+            Thread.currentThread().getName(), item, buffer.size());
+
+        notifyAll();   // wake ALL waiting consumers (safer than notify() in multi-consumer)
+    }
+
+    // Called by consumer threads
+    public synchronized Integer take() throws InterruptedException {
+        while (buffer.isEmpty() && !shuttingDown) {
+            wait();   // release lock, wait until producer adds items
+        }
+        if (buffer.isEmpty()) return null;   // shutdown path
+
+        int item = buffer.poll();
+        System.out.printf("[%s] TOOK %d (size=%d)%n",
+            Thread.currentThread().getName(), item, buffer.size());
+
+        notifyAll();   // wake ALL waiting producers (some may now have space)
+        return item;
+    }
+
+    public synchronized void shutdown() {
+        shuttingDown = true;
+        notifyAll();   // wake all blocked threads so they can check shuttingDown and exit
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        MultiWorkerBuffer buf = new MultiWorkerBuffer(3);
+
+        // 2 producers
+        Thread[] producers = new Thread[2];
+        for (int i = 0; i &lt; 2; i++) {
+            final int producerId = i;
+            producers[i] = new Thread(() -&gt; {
+                try {
+                    for (int item = 0; item &lt; 10; item++) {
+                        buf.put(producerId * 100 + item);
+                        Thread.sleep(100);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }, "producer-" + i);
+        }
+
+        // 3 consumers
+        Thread[] consumers = new Thread[3];
+        for (int i = 0; i &lt; 3; i++) {
+            consumers[i] = new Thread(() -&gt; {
+                try {
+                    while (true) {
+                        Integer item = buf.take();
+                        if (item == null) break;   // shutdown signal
+                        Thread.sleep(200);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }, "consumer-" + i);
+        }
+
+        for (Thread t : producers) t.start();
+        for (Thread t : consumers) t.start();
+        for (Thread t : producers) t.join();
+
+        buf.shutdown();
+        for (Thread t : consumers) t.join();
+        System.out.println("All done.");
+    }
+}</code></pre>
+
+            <h3>The Diagnostic Pattern: Identifying <code>wait()</code>/<code>notify()</code> Bugs in Production</h3>
+            <p>When <code>wait()</code>/<code>notify()</code> code misbehaves, the symptoms are:</p>
+            <ul>
+                <li><strong>Threads stuck in <code>WAITING</code> forever</strong> — <code>notify()</code> was called before <code>wait()</code>, or <code>notify()</code> woke the wrong thread and the correct waiting thread is never woken again</li>
+                <li><strong><code>if</code> instead of <code>while</code></strong> — thread proceeds with invalid state after spurious wakeup</li>
+                <li><strong><code>notify()</code> vs <code>notifyAll()</code></strong> — with multiple thread types, <code>notify()</code> can wake the wrong type, leaving a correct waiter permanently stuck</li>
+            </ul>
+            <p>To diagnose: <code>jstack &lt;pid&gt;</code> and look for threads in <code>java.lang.Object.wait()</code>. Check which object's monitor they're waiting on. Then find the thread that holds that monitor and trace why it isn't calling <code>notify()</code>.</p>
+
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture & Performance</h2>
+
+            <h3>Performance: When <code>wait()</code>/<code>notify()</code> Is the Right Tool</h3>
+            <p><code>wait()</code>/<code>notify()</code> has essentially zero overhead when threads are not contending. A thread parked in <code>wait()</code> consumes no CPU — it is removed from the OS scheduler's run queue entirely. The cost only appears at <code>notify()</code> time when the OS must wake the waiting thread (~1–10 microseconds for the kernel context switch back to RUNNABLE).</p>
+            <p>Compare to <strong>busy-waiting</strong> (the alternative without <code>wait()</code>):</p>
+
+<pre><code>// Busy-waiting — NEVER do this
+while (buffer.isEmpty()) {
+    // spin-checking continuously — 100% CPU usage while waiting
+    // this is what you're AVOIDING with wait()
+}</code></pre>
+            <p><code>wait()</code> is the correct way to block a thread that's waiting for a condition to change — zero CPU, OS manages the wakeup.</p>
+
+            <h3>Thread Starvation Risk with <code>notify()</code></h3>
+            <p>With multiple threads waiting and <code>notify()</code> (single wakeup), the JVM picks randomly. In a scenario with 3 consumer threads, the same consumer can be woken repeatedly while the other two starve — they remain in the wait set forever. <code>notifyAll()</code> prevents starvation at the cost of extra wakeups (but threads that don't need to proceed simply re-evaluate their <code>while</code> condition and go back to waiting cheaply).</p>
+
+            <h3>Common Pitfalls</h3>
+
+            <p><strong>1. <code>wait()</code> Outside <code>synchronized</code> Block</strong></p>
+<pre><code>// Throws IllegalMonitorStateException immediately at runtime
+obj.wait();   // not inside synchronized(obj) block</code></pre>
+
+            <p><strong>2. <code>notify()</code> on a Different Object Than <code>wait()</code></strong></p>
+<pre><code>synchronized (lockA) {
+    lockA.wait();     // waiting on lockA's wait set
+}
+// ... another thread ...
+synchronized (lockB) {
+    lockB.notify();   // notifies lockB's wait set — WRONG, lockA's waiter is never woken
+}</code></pre>
+
+            <p><strong>3. Using <code>if</code> Instead of <code>while</code> (Spurious Wakeup / Multi-Consumer Bug)</strong></p>
+<pre><code>// WRONG
+synchronized (this) {
+    if (buffer.isEmpty()) wait();   // can wake spuriously and proceed to remove on empty buffer
+    buffer.remove();                // NullPointerException / NoSuchElementException
+}
+
+// CORRECT
+synchronized (this) {
+    while (buffer.isEmpty()) wait(); // guaranteed: buffer not empty when we proceed
+    buffer.remove();
+}</code></pre>
+
+            <p><strong>4. Not Calling <code>notifyAll()</code> on Shutdown</strong></p>
+<pre><code>// Without notifyAll() on shutdown:
+// Consumer threads waiting in wait() are never woken up
+// JVM hangs forever with user threads stuck in WAITING
+
+public synchronized void shutdown() {
+    this.running = false;
+    notifyAll();   // wake all waiting threads so they can check 'running' and exit
+}</code></pre>
+
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: What is the purpose of <code>wait()</code> and <code>notify()</code> and why must they be called inside a <code>synchronized</code> block?</strong></p>
+            <p><code>wait()</code> and <code>notify()</code> enable two threads sharing the same intrinsic lock to coordinate their work — specifically, for one thread to signal the other that a condition has changed. <code>wait()</code> causes the calling thread to release the monitor and park itself with zero CPU consumption until another thread calls <code>notify()</code> or <code>notifyAll()</code> on the same object. <code>notify()</code> wakes one waiting thread so it can re-acquire the monitor and continue. They must be called inside a <code>synchronized</code> block because they operate on the object's monitor — a thread cannot release a lock it doesn't hold, and notifying a wait set on an unowned monitor makes no sense. Calling either outside <code>synchronized</code> throws <code>IllegalMonitorStateException</code>. The contract: always <code>synchronized(obj)</code> before <code>obj.wait()</code> or <code>obj.notify()</code>.</p>
+            <hr>
+
+            <p><strong>Q2: What is the difference between <code>wait()</code> and <code>sleep()</code>?</strong></p>
+            <p>Four key differences: (1) <strong>Called on</strong>: <code>wait()</code> is called on an <code>Object</code> (<code>obj.wait()</code>); <code>sleep()</code> is a static method on <code>Thread</code> (<code>Thread.sleep(ms)</code>). (2) <strong>Lock release</strong>: <code>wait()</code> releases the intrinsic lock of the object it's called on; <code>sleep()</code> holds all locks the thread owns for the entire sleep duration — it's a selfish pause. (3) <strong>Wake condition</strong>: <code>wait()</code> requires <code>notify()</code> or <code>notifyAll()</code> from another thread (or a timeout, or interrupt) to wake up; <code>sleep()</code> wakes after the specified duration elapses, or on <code>interrupt()</code>. (4) <strong>Context requirement</strong>: <code>wait()</code> must be called inside a <code>synchronized</code> block on the same object; <code>sleep()</code> has no such requirement. The conceptual distinction: <code>sleep()</code> means "pause for a fixed time, do not release resources"; <code>wait()</code> means "I'm blocked on a condition — let another thread proceed, and wake me when the condition changes."</p>
+            <hr>
+
+            <p><strong>Q3: Why should you always use a <code>while</code> loop instead of an <code>if</code> statement when calling <code>wait()</code>?</strong></p>
+            <p>Three reasons: (1) <strong>Spurious wakeups</strong> — the Java specification explicitly permits threads to wake from <code>wait()</code> without any <code>notify()</code> being called. With an <code>if</code>, a spuriously woken thread proceeds as if the condition were met — producing incorrect behavior. With a <code>while</code>, it re-checks the condition and goes back to waiting if necessary. (2) <strong>Multiple waiters of the same type</strong> — if <code>notifyAll()</code> is called, every waiting thread wakes up. Only one gets the lock and consumes the resource; the others re-acquire the lock to find the condition no longer holds. With <code>if</code>, those threads proceed incorrectly; with <code>while</code>, they correctly re-wait. (3) <strong>Defensive correctness</strong> — a <code>while</code> loop makes the code correct regardless of notification source, spurious or genuine. This is Joshua Bloch's Item 81 in <em>Effective Java</em>: "always use the wait loop idiom to invoke the wait method; never invoke it outside of a loop."</p>
+            <hr>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: The producer-consumer pattern works correctly with two threads but breaks with three consumer threads. What is the likely bug and how do you fix it?</strong></p>
+            <p>The bug is almost certainly <code>notify()</code> instead of <code>notifyAll()</code> in the producer. With <code>notify()</code>, the producer wakes exactly one random waiting consumer. If that consumer completes its work and the buffer is now empty, it calls <code>notify()</code> to wake the producer. But the other two waiting consumers are still in the wait set — never notified. The producer produces more items and calls <code>notify()</code> again, potentially waking the same consumer (non-deterministic), leaving the other two starved indefinitely. Fix: replace every <code>notify()</code> call with <code>notifyAll()</code> to wake all waiting threads. Each woken thread re-checks its <code>while</code> condition — threads whose conditions aren't met simply go back to waiting. The overhead of extra wakeups is minimal compared to the correctness guarantee. Alternatively, restructure to use <code>ReentrantLock</code> with separate <code>Condition</code> objects for producers and consumers — allowing targeted signaling without the non-determinism problem.</p>
+            <hr>
+
+            <p><strong>Q5: Explain the sequence of events when <code>wait()</code> is called and then <code>notify()</code> is called from another thread.</strong></p>
+            <p>Step 1: Thread A, inside <code>synchronized(obj)</code>, calls <code>obj.wait()</code>. Atomically: Thread A releases <code>obj</code>'s monitor, Thread A moves to <code>obj</code>'s wait set, Thread A's state changes to <code>WAITING</code>. Step 2: Thread B is now able to acquire <code>obj</code>'s monitor (it was waiting for it or now competes for it). Thread B enters its synchronized block and does its work. Step 3: Thread B calls <code>obj.notify()</code>. The JVM marks one thread from <code>obj</code>'s wait set (chosen at random) as eligible to re-acquire the monitor. Thread B does <strong>not</strong> lose the lock at this point. Step 4: Thread B exits the synchronized block — <code>monitorexit</code> executes, releasing <code>obj</code>'s monitor. Step 5: The awakened Thread A (and any other eligible threads) compete for <code>obj</code>'s monitor. Thread A acquires it, exits <code>wait()</code>, and resumes execution at the line after <code>wait()</code>. Step 6: Thread A re-evaluates the <code>while</code> loop condition. If the condition is now satisfied, it proceeds; if not (spurious wakeup or condition not yet met), it calls <code>wait()</code> again.</p>
+            <hr>
+
+            <h3>Advanced</h3>
+            <p><strong>Q6: Two threads are stuck — both in <code>WAITING</code> state on the same object, and neither is ever woken. What are the three most likely root causes and how do you diagnose each?</strong></p>
+            <p>Root cause 1: <strong><code>notify()</code> called before both threads reached <code>wait()</code></strong> — if the notifying thread called <code>notify()</code> when the wait set was empty, the notification was lost. No thread stored the notification — there's no memory of "a notify was sent." Threads that reach <code>wait()</code> afterward sleep forever. Diagnosis: add timestamps to <code>notify()</code> and <code>wait()</code> calls; if notify consistently precedes wait, restructure to use a boolean flag that is set before <code>notify()</code> and checked before <code>wait()</code>. Root cause 2: <strong>Exception swallowed in the notifying thread</strong> — the notifying thread threw an exception before reaching <code>notify()</code>, but the exception was swallowed (<code>catch(Exception e) {}</code>) and the <code>notify()</code> was never called. Diagnosis: add logging to exception handlers; <code>jstack</code> will show the notifying thread terminated or stuck. Root cause 3: <strong>Wrong object</strong> — <code>wait()</code> and <code>notify()</code> called on different objects (e.g., <code>this.wait()</code> in one method and <code>otherObj.notify()</code> in another). The notified wait set has no waiters; the actual waiters are on a different object's wait set and never woken. Diagnosis: <code>jstack</code> shows threads waiting on a specific object monitor address; verify the <code>notify()</code> is called on the exact same object address.</p>
+            <hr>
+
+            <p><strong>Q7: In the producer-consumer pattern, the consumer calls <code>notify()</code> after draining the buffer. Could this lead to the producer being starved if there are multiple consumers? Walk through the scenario precisely.</strong></p>
+            <p>Yes. Scenario: 1 producer thread, 3 consumer threads. Buffer capacity = 5. State: buffer full. Producer has called <code>wait()</code> and is in the wait set. All 3 consumers compete for the lock. Consumer 1 acquires the lock, enters <code>consume()</code>, drains the buffer, calls <code>notify()</code>. <code>notify()</code> wakes exactly one of the other waiting threads — but who's waiting? The producer (now buffer is empty) and potentially consumers 2 and 3 (if they also called <code>wait()</code> when the buffer was empty before the producer filled it). If <code>notify()</code> wakes Consumer 2 or Consumer 3 instead of the Producer, that consumer re-checks its condition (<code>while buffer.size() &lt; capacity</code>), finds it true (buffer IS empty), and goes back to <code>wait()</code>. Now Consumer 2 is in the wait set. Consumer 1's monitor is released. Consumer 2 or 3 was woken but went back to waiting. The producer is STILL in the wait set, never woken. Consumer 2 or 3's <code>wait()</code> call produces another <code>wait()</code>. Now producer + 2 consumers are all in the wait set, no thread running. The system deadlocks with no thread remaining to call <code>notify()</code>. This is the precise failure mode of <code>notify()</code> with multiple thread types. Fix: <code>notifyAll()</code> ensures the producer is always eventually woken; or use <code>ReentrantLock</code> with separate <code>Condition</code> objects (<code>producerCondition.signal()</code> from consumer, <code>consumerCondition.signal()</code> from producer) for perfectly targeted notification.</p>
+
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <p>After internalizing these notes, you should be able to:</p>
+            <ul>
+                <li><strong>State</strong> all four differences between <code>wait()</code> and <code>sleep()</code> — called-on, lock behavior, wake condition, context requirement — and explain precisely why <code>wait()</code> releases the lock while <code>sleep()</code> does not</li>
+                <li><strong>Implement</strong> the <code>wait()</code>/<code>notify()</code> contract correctly: both on the same object, both inside <code>synchronized(sameObj)</code>, with condition checks in a <code>while</code> loop</li>
+                <li><strong>Explain</strong> the three reasons (spurious wakeup, multiple waiters, defensive correctness) why <code>while</code> must be used instead of <code>if</code> with <code>wait()</code></li>
+                <li><strong>Implement</strong> a complete producer-consumer pattern with <code>synchronized</code> + <code>wait()</code>/<code>notifyAll()</code>, including correct shutdown signaling</li>
+                <li><strong>Distinguish</strong> <code>notify()</code> from <code>notifyAll()</code>, explain the starvation scenario that <code>notify()</code> creates with multiple thread types, and state when each is appropriate</li>
+                <li><strong>Trace</strong> the complete sequence of JVM operations when <code>wait()</code> is called and subsequently <code>notify()</code> is called, including the wait set, the atomic lock release, and the re-competition for the monitor</li>
+                <li><strong>Identify</strong> the three root causes of permanently stuck <code>WAITING</code> threads (missed notification, exception before notify, wrong object) and apply <code>jstack</code> to diagnose which is occurring</li>
+                <li><strong>Articulate</strong> all four limitations of <code>synchronized</code> + <code>wait()</code>/<code>notify()</code> — non-deterministic selection, no timeout, no interrupt-while-blocked, single wait set — as motivation for <code>ReentrantLock</code></li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
