@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: ReentrantLock, Conditions & Lock Interface</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Title & Syllabus</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Definitions</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Multithreading: ReentrantLock, Conditions & Lock Interface</h1>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: -10px; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                <p><strong>Syllabus Coverage: Lectures 26, 31–34</strong> (Re-entrancy · Lock Interface · ReentrantLock · try/finally pattern · Condition · Producer-Consumer with Locks · synchronized vs ReentrantLock)</p>
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            
+            <div class="highlight-box">
+                <p><strong>One-Sentence Definition:</strong><br>
+                <code>ReentrantLock</code> is the explicit, programmable replacement for the <code>synchronized</code> keyword — it provides the same mutual exclusion guarantee but adds timeout-based locking, interruptible lock acquisition, fairness ordering, and multiple independent condition queues, eliminating every major shortcoming of <code>synchronized</code>.</p>
+            </div>
+
+            <h3>The Architecture Analogy</h3>
+            <p><code>synchronized</code> is like a <strong>vending machine with a single built-in coin slot</strong> — every machine has one, it works automatically, you can't customize it, and once someone puts in a coin and the mechanism locks, anyone else who wants to use the machine just stands there indefinitely with no option to walk away.</p>
+            <p><code>ReentrantLock</code> is like a <strong>custom key management desk at a hotel</strong>. You go to the desk and explicitly ask for a key (<code>lock()</code>). If someone else has it, you can: wait indefinitely (like <code>synchronized</code>), wait up to 30 seconds and leave if it's not available (<code>tryLock(timeout)</code>), ask to be told the moment a key is free (<code>lockInterruptibly()</code>), or request a fair queue so the longest-waiting guest gets the key next (<code>new ReentrantLock(true)</code>). You must explicitly return the key when done (<code>unlock()</code>). More importantly, the hotel can give you separate keys for different rooms — one key for the pool, one for the gym — unlike <code>synchronized</code> where the single intrinsic lock covers everything.</p>
+            <p><strong><code>Condition</code> objects</strong> are the room-specific intercom system. Instead of a single announcement speaker (the object's one wait set), each <code>Condition</code> is a dedicated channel: producers wait on the "buffer not full" intercom, consumers wait on the "buffer not empty" intercom. You signal exactly the right channel — no random wakeups.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <p>Unlike <code>synchronized</code> (which is a JVM-level keyword compiled to <code>monitorenter</code>/<code>monitorexit</code> bytecode), <code>ReentrantLock</code> is a <strong>pure Java class</strong> in <code>java.util.concurrent.locks</code>, built on top of <code>AbstractQueuedSynchronizer</code> (AQS).</p>
+            <p>AQS maintains:</p>
+            <ul>
+                <li>An <code>int state</code> field (for <code>ReentrantLock</code>: 0 = unlocked, &gt;0 = locked, value = re-entry count)</li>
+                <li>A <strong>CLH queue</strong> (Craig, Landin, and Hagersten queue) of waiting threads — a doubly-linked list of nodes, each representing a parked thread</li>
+                <li>For fair mode: strict FIFO ordering of the CLH queue</li>
+                <li>For unfair mode: new arrivals can "barge in" and acquire the lock if it's momentarily free, even if others are queued</li>
+            </ul>
+            <p><code>lock()</code> uses <code>compareAndSet(0, 1)</code> on the <code>state</code> field (atomic CAS operation) to acquire. On failure, the thread is added to the AQS queue and parked via <code>LockSupport.park()</code>. <code>unlock()</code> decrements <code>state</code> and calls <code>LockSupport.unpark()</code> on the next queued thread.</p>
+            <p><code>Condition</code> objects each have their own wait queue (a separate linked list of parked threads). <code>await()</code> moves the calling thread from "lock holder" to "condition wait queue." <code>signal()</code> moves the first thread from the condition queue back to the AQS lock queue — it must still re-acquire the lock before proceeding.</p>
+
+
+            <h2 id="course-content">2. Course Content: Key Concepts & Definitions</h2>
+            
+            <h3>Re-Entrancy — What It Means and Why It Matters</h3>
+            <p>A lock is <strong>re-entrant</strong> if a thread that already holds the lock can acquire it again without blocking. Both <code>synchronized</code> and <code>ReentrantLock</code> are re-entrant.</p>
+
+<pre><code>public class ReentrantExample {
+
+    public synchronized void outerMethod() {
+        System.out.println("Entered outerMethod");
+        innerMethod();   // ← calls another synchronized method on 'this'
+        System.out.println("Exiting outerMethod");
+    }
+
+    public synchronized void innerMethod() {
+        System.out.println("Entered innerMethod");
+        // If locks were NOT re-entrant, the thread would deadlock here:
+        // it already holds 'this' lock and is now trying to acquire 'this' lock again
+        System.out.println("Exiting innerMethod");
+    }
+}</code></pre>
+
+            <p><strong>What happens under the hood:</strong> When a thread holding <code>this</code>'s intrinsic lock calls <code>innerMethod()</code>, the JVM checks the monitor owner. Since the current thread IS the owner, it simply increments the re-entry count (from 1 to 2) and enters. On exit from <code>innerMethod()</code>, the count decrements to 1. On exit from <code>outerMethod()</code>, it decrements to 0 and the lock is released.</p>
+            <p>Without re-entrancy, any call from a synchronized method to another synchronized method on the same object would immediately deadlock — the thread would block waiting for itself to release the lock it already holds. This would make <code>synchronized</code> nearly unusable in practice.</p>
+            <p><code>ReentrantLock</code> tracks re-entry the same way: each <code>lock()</code> call increments the hold count, each <code>unlock()</code> decrements it. The lock is only truly released when the hold count reaches 0.</p>
+
+<pre><code>ReentrantLock lock = new ReentrantLock();
+
+lock.lock();           // hold count = 1
+lock.lock();           // hold count = 2 (re-entrant — no block)
+lock.unlock();         // hold count = 1
+lock.unlock();         // hold count = 0 — lock ACTUALLY released</code></pre>
+
+            <h3>The <code>Lock</code> Interface and <code>ReentrantLock</code></h3>
+
+<pre><code>import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+// Lock is the interface — defines the contract
+// ReentrantLock is the concrete implementation
+Lock lock = new ReentrantLock();           // unfair (default) — higher throughput
+Lock fairLock = new ReentrantLock(true);   // fair — FIFO ordering, prevents starvation</code></pre>
+
+            <p><strong>Key methods of the <code>Lock</code> interface:</strong></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Behavior</th>
+                        <th><code>synchronized</code> equivalent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>lock()</code></td>
+                        <td>Acquire lock; block indefinitely if held by another thread</td>
+                        <td>Entering a <code>synchronized</code> block</td>
+                    </tr>
+                    <tr>
+                        <td><code>unlock()</code></td>
+                        <td>Release the lock</td>
+                        <td>Exiting a <code>synchronized</code> block</td>
+                    </tr>
+                    <tr>
+                        <td><code>tryLock()</code></td>
+                        <td>Acquire if available NOW; return <code>false</code> immediately if not</td>
+                        <td>No equivalent</td>
+                    </tr>
+                    <tr>
+                        <td><code>tryLock(time, unit)</code></td>
+                        <td>Acquire within timeout; return <code>false</code> if timeout expires</td>
+                        <td>No equivalent</td>
+                    </tr>
+                    <tr>
+                        <td><code>lockInterruptibly()</code></td>
+                        <td>Acquire, but allow interruption while waiting</td>
+                        <td>No equivalent</td>
+                    </tr>
+                    <tr>
+                        <td><code>newCondition()</code></td>
+                        <td>Create a <code>Condition</code> bound to this lock</td>
+                        <td>No equivalent (one wait set per object)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>The Mandatory <code>try/finally</code> Pattern</h3>
+            <p><code>ReentrantLock</code> does NOT auto-release on exception (unlike <code>synchronized</code>). If code inside a <code>lock()</code> block throws and you haven't put <code>unlock()</code> in a <code>finally</code> block, the lock is held forever — causing all threads waiting for it to deadlock permanently.</p>
+
+<pre><code>lock.lock();
+doSomething();     // if this throws, unlock() is never called → permanent deadlock
+lock.unlock();
+
+// ─── ALWAYS use try/finally ────────────────────────────────────────────────
+lock.lock();
+try {
+    doSomething();    // even if this throws, finally block guarantees unlock
+} finally {
+    lock.unlock();    // ALWAYS executed — exception or not
+}</code></pre>
+            
+            <p>This is the single most important operational rule for <code>ReentrantLock</code>. Every production use of <code>lock()</code> must be paired with <code>unlock()</code> in a <code>finally</code> block. No exceptions.</p>
+
+            <h3><code>tryLock()</code> — Non-Blocking and Timeout-Based Acquisition</h3>
+
+<pre><code>Lock lock = new ReentrantLock();
+
+// Non-blocking attempt: acquire if immediately available, return false otherwise
+if (lock.tryLock()) {
+    try {
+        // Got the lock — do work
+    } finally {
+        lock.unlock();
+    }
+} else {
+    // Lock not available — do something else instead of blocking
+    System.out.println("Lock busy — skipping this cycle");
+}
+
+// With timeout: wait up to 500ms, then give up
+try {
+    if (lock.tryLock(500, TimeUnit.MILLISECONDS)) {
+        try {
+            // Got the lock within timeout
+        } finally {
+            lock.unlock();
+        }
+    } else {
+        // Timeout expired — lock still held by another thread
+        System.out.println("Timed out waiting for lock");
+    }
+} catch (InterruptedException e) {
+    Thread.currentThread().interrupt();   // restore interrupt flag
+}</code></pre>
+
+            <p><code>tryLock()</code> is the primary tool for <strong>deadlock prevention</strong>. If Thread 1 holds lockA and needs lockB, and Thread 2 holds lockB and needs lockA — a classic deadlock — using <code>tryLock()</code> with a timeout lets each thread detect it can't get both locks and back off, release what it holds, and retry.</p>
+
+            <h3>Fairness: Fair vs Unfair <code>ReentrantLock</code></h3>
+
+<pre><code>// Fair lock — threads acquire in FIFO request order
+Lock fairLock = new ReentrantLock(true);
+
+// Unfair lock (default) — threads may "barge in" if lock becomes free
+Lock unfairLock = new ReentrantLock(false);   // or just new ReentrantLock()</code></pre>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Fair (<code>true</code>)</th>
+                        <th>Unfair (<code>false</code>)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Acquisition order</strong></td>
+                        <td>Strict FIFO — longest-waiting thread gets lock next</td>
+                        <td>Non-deterministic — a new arrival can take the lock before queued threads</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Starvation</strong></td>
+                        <td>Impossible — every thread eventually gets the lock</td>
+                        <td>Possible — a thread could be skipped repeatedly</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Throughput</strong></td>
+                        <td>Slightly lower — must maintain and check the queue</td>
+                        <td>Higher — avoids queue overhead when lock is immediately available</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Context switches</strong></td>
+                        <td>More — always wakes the queued thread</td>
+                        <td>Fewer — new arrival takes the lock without a wake-up cycle</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Use when</strong></td>
+                        <td>Long-running tasks, fairness is critical, preventing starvation</td>
+                        <td>Short critical sections, throughput matters more than order</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><code>synchronized</code> is effectively non-deterministic (like unfair) with no way to opt into fairness.</p>
+
+            <h3><code>Condition</code> Objects — Targeted Thread Signaling</h3>
+            <p>A <code>Condition</code> is obtained from a lock and provides its own wait/signal queue — completely separate from other <code>Condition</code> objects on the same lock.</p>
+
+<pre><code>Lock lock = new ReentrantLock();
+Condition notFull  = lock.newCondition();   // producers wait here when buffer is full
+Condition notEmpty = lock.newCondition();   // consumers wait here when buffer is empty</code></pre>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th><code>Condition</code> method</th>
+                        <th>Equivalent to</th>
+                        <th>Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>await()</code></td>
+                        <td><code>Object.wait()</code></td>
+                        <td>Release lock, park thread on THIS condition's queue</td>
+                    </tr>
+                    <tr>
+                        <td><code>signal()</code></td>
+                        <td><code>Object.notify()</code></td>
+                        <td>Wake one thread from THIS condition's queue</td>
+                    </tr>
+                    <tr>
+                        <td><code>signalAll()</code></td>
+                        <td><code>Object.notifyAll()</code></td>
+                        <td>Wake all threads from THIS condition's queue</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>The critical advantage over <code>notify()</code>:</strong> With <code>synchronized</code> + <code>notifyAll()</code>, waking up all waiting threads means producers and consumers both wake up — only one proceeds, the rest re-evaluate and go back to waiting. With separate <code>Condition</code> objects, the producer calls <code>notEmpty.signal()</code> to wake exactly one consumer, and the consumer calls <code>notFull.signal()</code> to wake exactly one producer. Zero wasted wakeups, deterministic targeting.</p>
+
+            <h3>Producer-Consumer with <code>ReentrantLock</code> + <code>Condition</code></h3>
+
+<pre><code>import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class LockBasedBuffer {
+    private final List&lt;Integer&gt; buffer = new LinkedList&lt;&gt;();
+    private final int capacity;
+
+    private final Lock lock = new ReentrantLock(true);       // fair lock
+    private final Condition notFull  = lock.newCondition();  // producers wait here
+    private final Condition notEmpty = lock.newCondition();  // consumers wait here
+
+    public LockBasedBuffer(int capacity) { this.capacity = capacity; }
+
+    public void produce(int item) throws InterruptedException {
+        lock.lock();
+        try {
+            while (buffer.size() == capacity) {
+                System.out.println("[Producer] Buffer full — awaiting");
+                notFull.await();   // releases lock; parks on notFull's queue
+            }
+            buffer.add(item);
+            System.out.println("[Producer] Added: " + item);
+            notEmpty.signal();     // wake exactly one waiting consumer
+        } finally {
+            lock.unlock();         // ALWAYS in finally
+        }
+    }
+
+    public int consume() throws InterruptedException {
+        lock.lock();
+        try {
+            while (buffer.isEmpty()) {
+                System.out.println("[Consumer] Buffer empty — awaiting");
+                notEmpty.await();  // releases lock; parks on notEmpty's queue
+            }
+            int item = buffer.remove(0);
+            System.out.println("[Consumer] Removed: " + item);
+            notFull.signal();      // wake exactly one waiting producer
+            return item;
+        } finally {
+            lock.unlock();
+        }
+    }
+}</code></pre>
+
+            <p>Compare to the <code>synchronized</code> version: producers and consumers have <strong>separate waiting queues</strong> (<code>notFull</code> vs <code>notEmpty</code>). When a consumer signals, it calls <code>notFull.signal()</code> — guaranteed to wake a producer, not another consumer. No wasted wakeups, no starvation, deterministic behavior.</p>
+
+            <h3><code>synchronized</code> vs <code>ReentrantLock</code> — Complete Comparison</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th><code>synchronized</code></th>
+                        <th><code>ReentrantLock</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Lock acquisition</strong></td>
+                        <td>Automatic on block entry</td>
+                        <td>Manual — <code>lock()</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Lock release</strong></td>
+                        <td>Automatic on block exit (even on exception)</td>
+                        <td>Manual — <code>unlock()</code> in <code>finally</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Timeout</strong></td>
+                        <td>❌ Waits indefinitely</td>
+                        <td>✅ <code>tryLock(time, unit)</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Non-blocking attempt</strong></td>
+                        <td>❌ Not possible</td>
+                        <td>✅ <code>tryLock()</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Interruptible waiting</strong></td>
+                        <td>❌ Thread blocked on synchronized cannot be interrupted</td>
+                        <td>✅ <code>lockInterruptibly()</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fairness</strong></td>
+                        <td>❌ Non-deterministic</td>
+                        <td>✅ <code>new ReentrantLock(true)</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Multiple conditions</strong></td>
+                        <td>❌ One wait set per object</td>
+                        <td>✅ Unlimited <code>Condition</code> objects via <code>newCondition()</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Manual unlock from elsewhere</strong></td>
+                        <td>❌ Must exit the block</td>
+                        <td>✅ <code>unlock()</code> can be called from any method</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Re-entrancy</strong></td>
+                        <td>✅ Yes</td>
+                        <td>✅ Yes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Deadlock avoidance</strong></td>
+                        <td>❌ No mechanism</td>
+                        <td>✅ <code>tryLock()</code> with timeout + back-off</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Visibility guarantee</strong></td>
+                        <td>✅ JMM happens-before on monitor release</td>
+                        <td>✅ Same — AQS uses <code>volatile</code> internally</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ease of use</strong></td>
+                        <td>High — automatic management</td>
+                        <td>Lower — must remember <code>try/finally</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Risk if misused</strong></td>
+                        <td>Moderate — over-synchronization</td>
+                        <td>High — forgotten <code>unlock()</code> = permanent deadlock</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <p><strong>Bottom line:</strong> <code>synchronized</code> is appropriate for simple, short critical sections where auto-release on exception is a safety net. <code>ReentrantLock</code> is the tool for anything requiring timeouts, fairness, interruption, or multiple wait conditions. In a codebase where you're already using <code>ReentrantLock</code>, prefer it consistently — mixing the two styles adds cognitive overhead.</p>
+
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation</h2>
+            
+            <h3>Complete Example: Deadlock-Resistant Account Transfer</h3>
+            <p>The classic deadlock scenario: transferring money between two accounts requires locking both. <code>tryLock()</code> with timeout makes it deadlock-safe:</p>
+
+<pre><code>import java.util.concurrent.locks.*;
+
+public class BankAccount {
+    private double balance;
+    private final Lock lock = new ReentrantLock();
+    private final String id;
+
+    public BankAccount(String id, double balance) {
+        this.id = id;
+        this.balance = balance;
+    }
+
+    /**
+     * Transfer amount from this account to target.
+     * Uses tryLock() with timeout on BOTH locks to prevent deadlock.
+     * If either lock times out, releases all held locks and retries.
+     */
+    public boolean transfer(BankAccount target, double amount)
+            throws InterruptedException {
+        int attempts = 0;
+        while (attempts &lt; 3) {
+            // Try to acquire THIS account's lock
+            if (this.lock.tryLock(50, TimeUnit.MILLISECONDS)) {
+                try {
+                    // Try to acquire TARGET account's lock
+                    if (target.lock.tryLock(50, TimeUnit.MILLISECONDS)) {
+                        try {
+                            if (this.balance &lt; amount) {
+                                System.out.println("Insufficient funds in " + this.id);
+                                return false;
+                            }
+                            this.balance -= amount;
+                            target.balance += amount;
+                            System.out.printf("Transferred %.2f from %s to %s%n",
+                                amount, this.id, target.id);
+                            return true;
+                        } finally {
+                            target.lock.unlock();
+                        }
+                    }
+                    // Target lock timed out — release source lock and retry
+                } finally {
+                    this.lock.unlock();
+                }
+            }
+            // Both locks failed — back off before retry to reduce contention
+            attempts++;
+            Thread.sleep(10 * attempts);   // exponential backoff
+        }
+        System.out.println("Transfer failed after retries — deadlock avoidance triggered");
+        return false;
+    }
+
+    public double getBalance() {
+        lock.lock();
+        try { return balance; }
+        finally { lock.unlock(); }
+    }
+}</code></pre>
+            <p>This pattern is impossible with <code>synchronized</code> — there is no way to attempt acquiring a <code>synchronized</code> lock with a timeout.</p>
+
+            <h3>Real-World Use Case: Rate Limiter with <code>tryLock()</code></h3>
+
+<pre><code>import java.util.concurrent.locks.*;
+
+/**
+ * A simple rate limiter: allows at most `maxRequests` per time window.
+ * tryLock() prevents request threads from blocking when the limiter is busy updating.
+ */
+public class RateLimiter {
+    private final int maxRequests;
+    private int requestCount = 0;
+    private long windowStart = System.currentTimeMillis();
+    private final long windowMs;
+    private final Lock lock = new ReentrantLock();
+
+    public RateLimiter(int maxRequests, long windowMs) {
+        this.maxRequests = maxRequests;
+        this.windowMs = windowMs;
+    }
+
+    /**
+     * Returns true if the request is allowed, false if rate limit exceeded.
+     * Never blocks — uses tryLock() so callers get an immediate decision.
+     */
+    public boolean allowRequest() {
+        if (!lock.tryLock()) {
+            return false;  // lock busy — reject immediately (conservative)
+        }
+        try {
+            long now = System.currentTimeMillis();
+            if (now - windowStart &gt; windowMs) {
+                windowStart = now;
+                requestCount = 0;
+            }
+            if (requestCount &lt; maxRequests) {
+                requestCount++;
+                return true;
+            }
+            return false;
+        } finally {
+            lock.unlock();
+        }
+    }
+}</code></pre>
+
+            <h3><code>lockInterruptibly()</code> — Responsive Shutdown</h3>
+
+<pre><code>public class InterruptibleWorker implements Runnable {
+    private final Lock lock;
+
+    public InterruptibleWorker(Lock lock) { this.lock = lock; }
+
+    @Override
+    public void run() {
+        try {
+            // Unlike lock(), this CAN be interrupted while waiting
+            lock.lockInterruptibly();
+            try {
+                performWork();
+            } finally {
+                lock.unlock();
+            }
+        } catch (InterruptedException e) {
+            // Thread was interrupted while waiting for the lock
+            // Clean exit — no lock acquired, no unlock needed
+            System.out.println(Thread.currentThread().getName() + " interrupted — exiting cleanly");
+            Thread.currentThread().interrupt();  // restore flag
+        }
+    }
+
+    private void performWork() { /* ... */ }
+}</code></pre>
+            <p>With <code>synchronized</code>, a thread blocked waiting to acquire the lock <strong>cannot be interrupted</strong> — it's stuck until the lock is released by its holder. <code>lockInterruptibly()</code> is essential for responsive shutdown in services where threads may be waiting on locks when a shutdown signal arrives.</p>
+
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture & Performance</h2>
+
+            <h3>AQS Internals — Why <code>ReentrantLock</code> Performs Well</h3>
+            <p><code>AbstractQueuedSynchronizer</code> (AQS) uses a single <code>volatile int state</code> field for all synchronization state. Lock acquisition is a CAS (Compare-And-Swap) operation — a single atomic CPU instruction (no OS system call for uncontended acquisition). Parking waiting threads uses <code>LockSupport.park()</code>, which calls into the OS only when the thread genuinely needs to block. The result: uncontended <code>ReentrantLock</code> is essentially as fast as <code>synchronized</code> (both leverage CAS). Contended behavior differs: <code>synchronized</code> relies on the JVM's built-in monitor inflation mechanism; <code>ReentrantLock</code> uses the explicit AQS queue with predictable behavior.</p>
+
+            <h3>Performance: Fair vs Unfair Lock</h3>
+            <p>Fair locks maintain strict FIFO via the AQS queue. On every lock acquisition, the thread must check the queue and park itself at the end, even if the lock is briefly free. Unfair locks allow "barging" — if the lock becomes free exactly when a new thread calls <code>lock()</code>, that thread takes it without queuing. Empirically, unfair locks show <strong>2–5x higher throughput</strong> for short critical sections because they avoid the overhead of queue management and thread wake-up cycles. Use fair locks only when starvation is a genuine risk (long-running, heterogeneous workloads) or when strict ordering is a correctness requirement.</p>
+
+            <h3>Common Pitfalls</h3>
+
+            <p><strong>1. Forgetting <code>unlock()</code> in a <code>finally</code> Block</strong></p>
+<pre><code>lock.lock();
+process();         // throws RuntimeException
+lock.unlock();     // NEVER REACHED — lock held permanently
+// Every thread waiting for this lock is now deadlocked indefinitely
+
+// CORRECT — always
+lock.lock();
+try {
+    process();
+} finally {
+    lock.unlock();   // always runs, even on exception
+}</code></pre>
+
+            <p><strong>2. Calling <code>unlock()</code> Without Holding the Lock</strong></p>
+<pre><code>lock.unlock();   // throws IllegalMonitorStateException if this thread doesn't hold the lock</code></pre>
+
+            <p><strong>3. Acquiring Inside <code>try</code> Block (Leaving a Window)</strong></p>
+<pre><code>try {
+    lock.lock();   // if lock() itself throws (e.g., InterruptedException via lockInterruptibly)
+    // ... work ...
+} finally {
+    lock.unlock(); // called even if lock() failed — IllegalMonitorStateException
+}
+
+// CORRECT: lock() outside the try block (lock() on ReentrantLock doesn't throw)
+lock.lock();       // ← outside try
+try {
+    // ... work ...
+} finally {
+    lock.unlock();
+}
+// For lockInterruptibly(): catch InterruptedException before the finally block</code></pre>
+
+            <p><strong>4. Using <code>Condition.await()</code> Outside <code>lock()</code> Scope</strong></p>
+<pre><code>Condition cond = lock.newCondition();
+cond.await();   // IllegalMonitorStateException — must hold the lock
+
+// CORRECT
+lock.lock();
+try {
+    while (conditionNotMet) cond.await();
+} finally {
+    lock.unlock();
+}</code></pre>
+
+            <p><strong>5. Calling <code>signal()</code> on the Wrong <code>Condition</code></strong></p>
+            <p>With multiple conditions, calling <code>notFull.signal()</code> when you want to wake a producer but a consumer is waiting on <code>notEmpty</code> means the consumer never wakes up. Keep condition semantics explicit: <code>notFull</code> = producers wait here / consumers signal here; <code>notEmpty</code> = consumers wait here / producers signal here.</p>
+
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: What is re-entrant synchronization and why is it necessary?</strong></p>
+            <p>Re-entrant synchronization means a thread can acquire the same lock it already holds, without blocking on itself. Both <code>synchronized</code> and <code>ReentrantLock</code> are re-entrant. It's necessary because synchronized methods frequently call other synchronized methods on the same object — common in recursive algorithms, template method patterns, and any class where internal methods also need to be thread-safe. Without re-entrancy, a thread inside <code>synchronized methodA()</code> that calls <code>synchronized methodB()</code> on the same object would try to acquire the lock it already holds, see it as "owned by another thread" (itself), and block — permanently deadlocking with itself. <code>ReentrantLock</code> tracks re-entrancy via a hold count: each <code>lock()</code> call increments it, each <code>unlock()</code> decrements it, and the lock is only released when the count reaches zero.</p>
+            <hr>
+
+            <p><strong>Q2: What is a <code>Condition</code> object and how does it improve on <code>wait()</code>/<code>notify()</code>?</strong></p>
+            <p>A <code>Condition</code> is obtained from a <code>Lock</code> via <code>lock.newCondition()</code> and provides its own independent queue of waiting threads, decoupled from the lock's general wait set. <code>await()</code> is equivalent to <code>wait()</code> — it releases the lock and parks the thread on this <code>Condition</code>'s queue. <code>signal()</code> is equivalent to <code>notify()</code> — it wakes one thread from this <code>Condition</code>'s queue. The improvement over <code>wait()</code>/<code>notify()</code> is that you can have <strong>multiple <code>Condition</code> objects per lock</strong>, each representing a different condition. In a producer-consumer scenario, producers wait on <code>notFull</code> and consumers wait on <code>notEmpty</code>. When a consumer finishes consuming, it calls <code>notFull.signal()</code> — guaranteed to wake a producer. With <code>synchronized</code> + <code>notify()</code>, you have one wait set and may accidentally wake a consumer instead of a producer, requiring <code>notifyAll()</code> and accepting wasted wakeups. <code>Condition</code> eliminates the non-determinism.</p>
+            <hr>
+
+            <p><strong>Q3: Why must <code>unlock()</code> always be called in a <code>finally</code> block?</strong></p>
+            <p><code>ReentrantLock</code> does not automatically release the lock when an exception is thrown — unlike <code>synchronized</code>, which compiles <code>monitorexit</code> into a synthetic <code>finally</code> block, ensuring release even on exception. If code between <code>lock()</code> and <code>unlock()</code> throws and <code>unlock()</code> is not in a <code>finally</code> block, the lock remains held permanently. Every thread subsequently calling <code>lock()</code> on that lock will block forever — a thread-level deadlock that silently freezes the application under load. The correct pattern is: call <code>lock()</code> outside the <code>try</code> block (so <code>finally</code> doesn't run if <code>lock()</code> itself fails), then wrap all work in <code>try { ... } finally { lock.unlock(); }</code>. This guarantees the lock is always released regardless of what happens inside the critical section.</p>
+            <hr>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: <code>tryLock()</code> returns <code>false</code> in your code — what are the two distinct scenarios this represents and how should you handle each differently?</strong></p>
+            <p>Scenario 1: <strong>Lock is held by another thread right now</strong> — <code>tryLock()</code> (no argument) returns false immediately if the lock is not free at the instant of the call, even if it becomes free a millisecond later. This is appropriate for cases where "if busy, do something else immediately" is the right behavior — rate limiters, non-blocking cache updates, optimistic UI refresh. Handling: proceed with a fallback path. Scenario 2: <strong>Lock was not acquired within the timeout</strong> — <code>tryLock(timeout, unit)</code> tried repeatedly for the timeout duration and the lock was never available. This indicates sustained contention. Handling: log a warning (contention at this level is a signal of a design problem), apply exponential backoff and retry, or fail-fast with an appropriate error response. In deadlock-avoidance code (two threads each trying <code>tryLock()</code> on two different locks), a <code>false</code> means "release what you have, back off, and retry the entire multi-lock acquisition sequence from scratch."</p>
+            <hr>
+
+            <p><strong>Q5: A service uses fair <code>ReentrantLock</code> and achieves 3x lower throughput than with unfair lock under load. Explain exactly why and when you'd accept that tradeoff.</strong></p>
+            <p>Fair lock (<code>new ReentrantLock(true)</code>) maintains strict FIFO via the AQS queue. Every lock acquisition — even when the lock is momentarily free — requires checking the queue head, potentially queuing the current thread, and waiting for <code>LockSupport.unpark()</code> after the previous holder calls <code>unlock()</code>. This involves OS-level thread scheduling — a system call per acquisition. Unfair lock allows "barging" — if the lock becomes free exactly when a new thread calls <code>lock()</code>, that thread takes it without queuing, avoiding the park/unpark cycle entirely. Under high throughput with many threads and short critical sections, this difference compounds: fair lock incurs a system call per acquisition, unfair does not. The throughput gap is typically 2–5x. Accept the tradeoff when: (1) tasks are long-running and varied — a starvation scenario is realistic and its cost (a thread making no progress indefinitely) exceeds the throughput difference, (2) predictable latency is required — fair lock prevents one thread from experiencing unbounded wait time, (3) the critical section is long enough that the per-acquisition overhead is negligible compared to the time inside the critical section.</p>
+            <hr>
+
+            <h3>Advanced</h3>
+            <p><strong>Q6: Explain the AQS (AbstractQueuedSynchronizer) mechanism that underlies <code>ReentrantLock</code>, and why its CAS-based design makes uncontended locking essentially free.</strong></p>
+            <p>AQS maintains a single <code>volatile int state</code> field and a CLH doubly-linked queue of waiting threads. For <code>ReentrantLock</code>, <code>state = 0</code> means unlocked; <code>state &gt; 0</code> means locked, and the value is the re-entry hold count. Lock acquisition: the acquiring thread executes <code>compareAndSet(0, 1)</code> on the <code>state</code> field — a single atomic CPU instruction (x86: <code>CMPXCHG</code>, ARM: <code>LDREX/STREX</code>) that checks and updates the value atomically without any OS involvement. If the CAS succeeds (state was 0, now 1), the thread has the lock with zero kernel overhead — no system call, no thread context switch, just a single atomic instruction. If the CAS fails (another thread holds the lock), the thread is added to the CLH queue as a <code>Node</code> and calls <code>LockSupport.park()</code> — this invokes the OS to suspend the thread (a real system call, ~1–10μs). On <code>unlock()</code>: <code>state</code> is decremented. If it reaches 0, the head of the CLH queue is checked; if a waiter exists, <code>LockSupport.unpark(waiter)</code> is called — another system call to resume that thread. The key insight: for uncontended locks (the common case in well-designed code), the entire lock/unlock cycle is one CAS instruction — essentially as fast as a regular memory write. The OS overhead only appears when threads genuinely contend, which is exactly when blocking is correct behavior.</p>
+            <hr>
+
+            <p><strong>Q7: You have a producer-consumer system using <code>synchronized</code> + <code>notifyAll()</code>. Under high load with 20 producer threads and 20 consumer threads, CPU usage is 90% but throughput is low. Diagnose and redesign.</strong></p>
+            <p>Diagnosis: <code>notifyAll()</code> wakes all 40 threads every time any state change occurs. With 40 threads competing for one monitor, 39 threads wake up, evaluate their conditions (most find conditions not met), and go back to <code>wait()</code> — each transition involves acquiring and releasing the monitor and OS scheduling overhead. This is a <strong>thundering herd</strong> problem: massive spurious wakeup overhead consuming CPU without useful work. Additionally, one wait set means producers and consumers both wake on every signal, doubling useless work. Redesign with <code>ReentrantLock</code> + two <code>Condition</code> objects: <code>notFull</code> (producers wait here) and <code>notEmpty</code> (consumers wait here). Producers call <code>notEmpty.signal()</code> (wakes exactly one consumer) after adding an item. Consumers call <code>notFull.signal()</code> (wakes exactly one producer) after removing an item. With 20 producers and 20 consumers, each signal wakes exactly one thread of the correct type — zero wasted wakeups. If capacity allows multiple concurrent producers or consumers, <code>signalAll()</code> on the specific condition still wakes only the relevant thread type, not the entire pool. Additional optimization: size the buffer to allow batching — each producer adds multiple items before signaling, reducing lock acquisition frequency per unit of work.</p>
+            <hr>
+
+            <p><strong>Q8: Design a <code>ReadWriteLock</code>-style scenario where you need multiple readers but exclusive writers. How would <code>ReentrantLock</code> alone fall short, and what does <code>java.util.concurrent.locks.ReadWriteLock</code> provide?</strong></p>
+            <p><code>ReentrantLock</code> provides mutual exclusion — only one thread at a time, whether reader or writer. For a read-heavy workload (e.g., an in-memory cache that's read 99% of the time and written 1% of the time), every read acquisition serializes all readers — even though concurrent reads are completely safe (reads don't modify state). Throughput is bounded by single-thread read access. <code>ReadWriteLock</code> (<code>ReentrantReadWriteLock</code> in Java) maintains two locks: a read lock (multiple concurrent holders allowed) and a write lock (exclusive — no readers or other writers while held). <code>rwLock.readLock().lock()</code> allows concurrent acquisition by multiple reader threads; <code>rwLock.writeLock().lock()</code> is exclusive. For a cache: readers call <code>readLock().lock()</code>, look up the entry, <code>readLock().unlock()</code> — all running in parallel. Writers call <code>writeLock().lock()</code>, update the cache, <code>writeLock().unlock()</code> — blocks until all readers finish, then runs exclusively. This is a pattern that <code>ReentrantLock</code> alone cannot express — it always excludes all threads regardless of operation type. Note: <code>ReadWriteLock</code> is not covered in this section of the course — this answer is included as context for where lock design goes next.</p>
+
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <p>After internalizing these notes, you should be able to:</p>
+            <ul>
+                <li><strong>Explain</strong> re-entrancy: what it means, why it's necessary, and what would happen (deadlock) if Java's locks were not re-entrant — with a concrete recursive/nested method call example</li>
+                <li><strong>Implement</strong> <code>ReentrantLock</code> with the mandatory <code>lock()</code> outside <code>try</code> + <code>unlock()</code> inside <code>finally</code> pattern, and explain why <code>unlock()</code> must be in <code>finally</code> but <code>lock()</code> must not be inside <code>try</code></li>
+                <li><strong>Apply</strong> <code>tryLock()</code> (immediate) and <code>tryLock(timeout, unit)</code> for non-blocking and timeout-based acquisition, and implement a deadlock-avoidance pattern using <code>tryLock()</code> + exponential backoff</li>
+                <li><strong>Distinguish</strong> fair and unfair <code>ReentrantLock</code> on the dimensions of acquisition ordering, starvation prevention, throughput, and context-switch overhead — and choose correctly for a given scenario</li>
+                <li><strong>Create</strong> <code>Condition</code> objects via <code>lock.newCondition()</code>, correctly use <code>await()</code>/<code>signal()</code> within a lock, and implement a producer-consumer with separate <code>notFull</code>/<code>notEmpty</code> conditions</li>
+                <li><strong>Explain</strong> why <code>Condition</code> + <code>signal()</code> is strictly superior to <code>synchronized</code> + <code>notify()</code> for multi-producer/multi-consumer scenarios — no thundering herd, no wrong-type wakeup, deterministic targeting</li>
+                <li><strong>Compare</strong> <code>synchronized</code> and <code>ReentrantLock</code> across all six dimensions in the comparison table — and state which to use for simple vs complex synchronization needs</li>
+                <li><strong>Explain</strong> at the AQS level why uncontended <code>ReentrantLock</code> acquisition is essentially free (single CAS instruction) and when OS overhead appears (contended case: <code>LockSupport.park/unpark</code>)</li>
+                <li><strong>Implement</strong> <code>lockInterruptibly()</code> for responsive shutdown in services where threads wait on locks and must be cleanly terminated on shutdown signal</li>
+                <li><strong>Identify</strong> the five common <code>ReentrantLock</code> pitfalls (missing <code>finally</code>, unlock without holding, <code>lock()</code> inside <code>try</code>, <code>await()</code> outside lock scope, wrong <code>Condition</code> signaled) and write the correct version of each</li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
