@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: Threads Manipulation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+        }
+        .sidebar {
+            width: 280px; /* Wider sidebar for longer titles */
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            flex-shrink: 0; /* Prevent sidebar from shrinking */
+        }
+        .sidebar h3 {
+            color: #3498db;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            padding: 0 15px;
+            font-size: 1.3em;
+            border-bottom: 1px solid #34495e;
+            padding-bottom: 10px;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar li {
+            margin-bottom: 5px;
+        }
+        .sidebar a {
+            display: block;
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 10px 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #34495e;
+            color: #3498db;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            max-width: 900px; /* Adjusted max-width for content */
+            margin: 20px auto;
+            background: #fff;
+            padding: 30px 50px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        h1, h2, h3, h4 {
+            color: #2c3e50;
+            margin-top: 1.8em;
+            margin-bottom: 0.8em;
+            text-align: left;
+        }
+        h1 {
+            font-size: 2.5em;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            font-size: 2em;
+            color: #34495e;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 5px;
+        }
+        h3 {
+            font-size: 1.6em;
+            color: #2980b9;
+        }
+        h4 {
+            font-size: 1.2em;
+            color: #3498db;
+        }
+        p {
+            margin-bottom: 1em;
+            text-align: justify; /* Justify paragraph text */
+        }
+        strong {
+            color: #e74c3c;
+        }
+        em {
+            font-style: italic;
+            color: #6c7a89;
+        }
+        code {
+            background-color: #ecf0f1;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #c0392b;
+        }
+        pre {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-bottom: 1.5em;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            line-height: 1.4;
+            text-align: left;
+        }
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+            text-align: left;
+        }
+        li {
+            margin-bottom: 0.5em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5em;
+            text-align: left;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #555;
+        }
+        blockquote {
+            background: #f9f9f9;
+            border-left: 5px solid #ccc;
+            margin: 1.5em 0;
+            padding: 0.5em 20px;
+            color: #555;
+            font-style: italic;
+            text-align: left;
+        }
+        .note, .warning, .code-example {
+            padding: 15px;
+            margin: 1.5em 0;
+            border-radius: 4px;
+            text-align: left; /* Keep specific blocks left-aligned unless content forces it */
+        }
+        .note {
+            background-color: #e8f4f8;
+            border-left: 4px solid #3498db;
+        }
+        .warning {
+            background-color: #fef0f0;
+            border-left: 4px solid #e74c3c;
+        }
+        .code-example {
+            background-color: #f0f4f7;
+            border-left: 3px solid #2980b9;
+        }
+        dt {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 1em;
+            text-align: left;
+        }
+        dd {
+            margin-bottom: 1em;
+            padding-left: 20px;
+            text-align: justify;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Multithreading Notes</h3>
+        <ul>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#creation-approaches">2. Thread Creation & Manipulation</a></li>
+            <li><a href="#senior-level-practical-implementation">3. Senior-Level Implementation</a></li>
+            <li><a href="#deep-dive-tradeoffs">4. Deep Dive: Tradeoffs</a></li>
+            <li><a href="#interview-questions">5. Interview Questions & Answers</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <header>
+            <h1>Java Multithreading: Threads Manipulation</h1>
+            <h3>Principal Architect Notes — Production-Grade Mastery Series</h3>
+            <p><strong>Syllabus Coverage: Lectures 10–19</strong> (Sequential Processing · Runnable · Thread Class · join() · JVM Threads · Speed Analysis · Daemon Threads · Thread Priority)</p>
+            <hr>
+        </header>
+
+        <section id="core-concept">
+            <h2>1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+
+            <h3>One-Sentence Definition:</h3>
+            <p>Thread manipulation in Java is the act of explicitly creating, starting, coordinating, and classifying threads — using <code>Runnable</code>, the <code>Thread</code> class, <code>join()</code>, <code>sleep()</code>, daemon flags, and priority hints — to move a program from its default sequential behavior into controlled concurrent execution.</p>
+
+            <h3>The Architecture Analogy</h3>
+            <p>Imagine a <strong>film production set</strong>. The director (main thread) kicks off the day by calling "action." In a low-budget sequential shoot, the director personally does everything: set up camera, act, do lighting, edit — one after another, nothing moves until the previous task is done.</p>
+            <p>A professional production assigns <strong>crew members</strong> (worker threads) to specialized roles: the camera operator runs independently, the sound engineer runs independently, the lighting technician runs independently. The director shouts "action" (<code>thread.start()</code>) for each crew member and they all work concurrently.</p>
+            <p>But here's the catch: the director cannot call "cut" and move to the next scene (<code>join</code> point) until the camera operator finishes their shot. That "waiting for the camera operator" is exactly what <code>thread.join()</code> does — it makes the calling thread wait until the target thread finishes.</p>
+            <p><strong>Daemon threads</strong> are like the catering crew — they're there only to <em>support</em> the main production crew. The moment the last actor (user thread) goes home, the catering crew packs up immediately too. Nobody waits for them. If you stay to set them up before the actors arrive (<code>setDaemon(true)</code> before <code>start()</code>), they automatically leave when the last actor does.</p>
+            <p><strong>Thread priority</strong> is like a studio memo saying "give the lead actor scheduling preference." In theory, the lead gets priority. In practice, if the union rules (OS scheduler) override the memo, the extra actor might get called first anyway.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <p><strong>Creating a thread:</strong> When <code>new Thread(runnable)</code> is called, the JVM creates a Java <code>Thread</code> object on the heap. At this point, no OS thread exists — it's just a Java object in <code>NEW</code> state.</p>
+            <p><strong>Starting a thread:</strong> <code>thread.start()</code> calls the native method <code>Thread.start0()</code>, which triggers <code>pthread_create()</code> on Linux / <code>CreateThread()</code> on Windows. The OS allocates a new kernel thread, assigns it a kernel thread ID, and places it in the OS scheduler's ready queue. The JVM allocates a private stack for it (default 512KB–1MB). The <code>start()</code> call returns immediately on the calling thread — it does not wait.</p>
+            <p><strong><code>run()</code> vs <code>start()</code>:</strong> Calling <code>run()</code> directly bypasses all of the above. It's a plain Java method call on the current thread. Zero OS thread creation. Zero concurrency. This is the single most common beginner mistake.</p>
+            <p><strong><code>join()</code>:</strong> Under the hood, <code>join()</code> uses OS-level thread synchronization — specifically a <code>wait/notify</code> mechanism on the <code>Thread</code> object's monitor. The calling thread parks itself (<code>WAITING</code> state, zero CPU) until the target thread transitions to <code>TERMINATED</code>, at which point the OS wakes the waiting thread and returns it to <code>RUNNABLE</code>.</p>
+            <p><strong><code>sleep(ms)</code>:</strong> Calls the native <code>Thread.sleep0()</code>, which tells the OS to park the current thread for the specified duration. The thread enters <code>TIMED_WAITING</code> state — zero CPU consumption. After the duration, the OS scheduler returns the thread to <code>RUNNABLE</code>. Critically, <code>sleep()</code> does <strong>not</strong> release any locks the thread holds (important for later lectures on synchronization).</p>
+            <p><strong>Daemon flag:</strong> Tracked as a boolean field on the <code>Thread</code> object in the JVM. At JVM shutdown decision time, the JVM counts only non-daemon (<code>isDaemon() == false</code>) threads. If that count reaches zero, the JVM calls <code>System.exit()</code> internally, terminating all remaining daemon threads immediately — mid-execution, no cleanup.</p>
+        </section>
+
+        <section id="creation-approaches">
+            <h2>2. Course Content: Key Concepts & Definitions</h2>
+
+            <h3>The Three Thread Creation Approaches</h3>
+            <p>Java gives you three syntactically different ways to define what a thread executes. They all result in the same thing: a <code>Runnable</code> passed to a <code>Thread</code> object.</p>
+
+            <h4>Approach 1: Implement <code>Runnable</code> (Preferred)</h4>
+            <pre><code class="language-java">// Step 1: Define the task
+class Runner implements Runnable {
+    @Override
+    public void run() {
+        for (int i = 0; i < 10; i++) {
+            System.out.println("Runner: " + i);
+        }
+    }
+}
+
+// Step 2: Wrap in Thread and start
+Thread t = new Thread(new Runner());
+t.start();</code></pre>
+            <p><code>Runnable</code> is a <strong>functional interface</strong> — it has exactly one abstract method (<code>run()</code>). This means it can be replaced with a lambda or anonymous inner class. The <code>@Override</code> annotation is not mandatory but is strongly recommended — it lets the compiler catch typos where you accidentally write <code>Run()</code> instead of <code>run()</code>.</p>
+            <p><strong>Why this approach is preferred:</strong> Your class can still extend another class. Java doesn't allow multiple inheritance of classes, so if you <code>extend Thread</code>, you've spent your one inheritance slot. Implementing <code>Runnable</code> keeps the class hierarchy clean — the task (what to do) is decoupled from the execution mechanism (the <code>Thread</code>).</p>
+
+            <h4>Approach 2: Anonymous Inner Class</h4>
+            <pre><code class="language-java">Thread t = new Thread(new Runnable() {
+    @Override
+    public void run() {
+        for (int i = 0; i < 10; i++) {
+            System.out.println("Anonymous: " + i);
+        }
+    }
+});
+t.start();</code></pre>
+            <p>Useful for short, one-off tasks defined at the point of use. IntelliJ will flag this as "can be replaced with lambda expression."</p>
+
+            <h4>Approach 3: Lambda Expression (Concise, Modern)</h4>
+            <pre><code class="language-java">// Runnable is a functional interface, so a lambda works directly
+Thread t = new Thread(() -> {
+    for (int i = 0; i < 10; i++) {
+        System.out.println("Lambda: " + i);
+    }
+});
+t.start();
+
+// Or store the Runnable first, then pass it
+Runnable task = () -> {
+    for (int i = 0; i < 10; i++) {
+        System.out.println("Stored lambda: " + i);
+    }
+};
+new Thread(task).start();</code></pre>
+            <p>Lambda is the idiomatic modern Java style. The compiler infers that the lambda implements <code>Runnable.run()</code>. Zero class boilerplate.</p>
+
+            <h4>Approach 4: Extend <code>Thread</code> Class (Use Sparingly)</h4>
+            <pre><code class="language-java">class Runner extends Thread {
+    @Override
+    public void run() {
+        for (int i = 0; i < 10; i++) {
+            System.out.println("Extended Thread: " + i);
+        }
+    }
+}
+
+// Now the runner IS a thread — no wrapping needed
+Runner r = new Runner();
+r.start();</code></pre>
+            <p>Since <code>Runner</code> is a <code>Thread</code>, you call <code>start()</code> directly on it. The <code>Thread</code> class itself implements <code>Runnable</code> — its default <code>run()</code> does nothing, which is why you must override it.</p>
+            <p><strong>When to avoid:</strong> You've used your one inheritance slot. If <code>Runner</code> later needs to extend <code>Vehicle</code> or <code>AbstractService</code>, you can't. Prefer <code>implements Runnable</code>.</p>
+
+            <h3><code>thread.start()</code> vs <code>thread.run()</code> — The Most Critical Distinction</h3>
+            <pre><code class="language-java">Thread t = new Thread(() -> {
+    System.out.println("Executing on: " + Thread.currentThread().getName());
+});
+
+t.run();    // Output: "Executing on: main"
+            // ↑ No new thread. run() is a plain method call on the current thread.
+            // Zero OS thread creation. Sequential. Indistinguishable from a regular method call.
+
+t.start();  // Output: "Executing on: Thread-0"
+            // ↑ New OS thread created. pthread_create() called internally.
+            // The lambda executes on the new thread. True concurrency.</code></pre>
+            <p>This will never throw an exception if you call <code>run()</code> by mistake. The code looks like it works. The output looks normal. Only the thread name reveals the bug. Under load, the "work" you thought was concurrent is actually sequential — a latent performance bug.</p>
+
+            <h3><code>Thread.sleep(ms)</code> — Pausing Execution</h3>
+            <pre><code class="language-java">class Runner extends Thread {
+    @Override
+    public void run() {
+        for (int i = 0; i < 10; i++) {
+            System.out.println(Thread.currentThread().getName() + ": " + i);
+            try {
+                Thread.sleep(1000);   // pause THIS thread for 1 second
+                                      // Other threads continue running unaffected
+            } catch (InterruptedException e) {
+                // Thread was interrupted while sleeping
+                // ALWAYS restore the interrupt flag — covered below
+                Thread.currentThread().interrupt();
+                return;  // exit cleanly
+            }
+        }
+    }
+}</code></pre>
+            <p><strong>What <code>sleep()</code> does at the OS level:</strong> The current thread is moved from <code>RUNNING</code> to <code>TIMED_WAITING</code>. The OS scheduler removes it from the run queue for the specified duration. Zero CPU. After the duration, the thread is returned to <code>RUNNABLE</code> and waits for a CPU slot.</p>
+            <p><strong>Why <code>InterruptedException</code> must be handled:</strong> Any thread can call <code>interrupt()</code> on a sleeping thread to signal it should stop (used for graceful shutdown — covered in later lectures). <code>InterruptedException</code> is the notification. Always either re-throw it or call <code>Thread.currentThread().interrupt()</code> to preserve the interrupt signal for callers. Never silently swallow it with an empty catch block.</p>
+
+            <h3><code>thread.join()</code> — Waiting for Another Thread to Finish</h3>
+            <pre><code class="language-java">public static void main(String[] args) throws InterruptedException {
+    Thread downloader = new Thread(() -> downloadImages(), "image-downloader");
+    Thread processor  = new Thread(() -> processImages(), "image-processor");
+
+    downloader.start();
+    // processor.start() called immediately after — but processImages()
+    // requires the download to be done first! This would be a bug:
+    processor.start();  // ← starts before download finishes
+
+    // FIX: wait for downloader before starting processor
+    // (shown in full example below)
+}</code></pre>
+            <p><strong>The dependency problem:</strong> <code>start()</code> returns immediately. The main thread does not wait. If Task B depends on Task A's output, blindly starting both threads simultaneously produces incorrect results.</p>
+            <p><strong><code>join()</code> solves this:</strong></p>
+            <pre><code class="language-java">public static void main(String[] args) {
+    Thread downloader = new Thread(() -> downloadImages(), "image-downloader");
+    downloader.start();
+
+    try {
+        downloader.join();   // main thread parks here (WAITING state, zero CPU)
+                             // until downloader thread reaches TERMINATED state
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return;
+    }
+
+    // Only reaches here after downloader has finished
+    Thread processor = new Thread(() -> processImages(), "image-processor");
+    processor.start();
+}</code></pre>
+            <p><strong>Joining multiple threads:</strong></p>
+            <pre><code class="language-java">t1.start();
+t2.start();
+t3.start();
+
+// Main thread waits for ALL three before continuing
+t1.join();
+t2.join();
+t3.join();
+
+System.out.println("All threads done. Continuing main.");
+// This line only executes after t1, t2, AND t3 have all terminated</code></pre>
+            <p><strong>Key behavior:</strong> <code>join()</code> can be called from any thread on any other thread — not just from main. Thread A can <code>join()</code> on Thread B; Thread C can <code>join()</code> on Thread A. The join point creates an explicit ordering guarantee.</p>
+
+            <h3>The Main Thread</h3>
+            <p>Every Java program starts with exactly one thread: the <strong>main thread</strong>, assigned automatically by the JVM to execute the <code>main(String[] args)</code> method. You cannot run a Java application without it.</p>
+            <pre><code class="language-java">public static void main(String[] args) {
+    System.out.println("Thread: " + Thread.currentThread().getName());    // "main"
+    System.out.println("Priority: " + Thread.currentThread().getPriority()); // 5
+    System.out.println("Daemon: " + Thread.currentThread().isDaemon());   // false
+}</code></pre>
+            <p>The main thread is a <strong>user thread</strong> with default priority (5). Child threads spawned from it inherit its daemon status by default (i.e., they are also non-daemon unless explicitly set). The JVM will not exit while the main thread or any other user thread is still alive.</p>
+
+            <h3>Threads Inside the JVM — What's Actually Running</h3>
+            <p>Use <code>Thread.getAllStackTraces().keySet()</code> to see all threads the JVM is managing:</p>
+            <pre><code class="language-java">for (Thread t : Thread.getAllStackTraces().keySet()) {
+    System.out.printf("%-30s | %-15s | daemon=%-5s%n",
+        t.getName(), t.getState(), t.isDaemon());
+}</code></pre>
+            <p><strong>Typical output for a simple two-thread application:</strong></p>
+            <pre><code>main                           | RUNNABLE        | daemon=false
+Thread-0                       | RUNNABLE        | daemon=false
+Thread-1                       | RUNNABLE        | daemon=false
+Notification Thread            | RUNNABLE        | daemon=true
+Finalizer                      | WAITING         | daemon=true
+Reference Handler              | RUNNABLE        | daemon=true
+Common-Cleaner                 | WAITING         | daemon=true</code></pre>
+            <p><strong>The JVM background daemon threads:</strong></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Thread Name</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Finalizer</code></td>
+                        <td>Runs <code>finalize()</code> methods on objects before GC reclaims them</td>
+                    </tr>
+                    <tr>
+                        <td><code>Reference Handler</code></td>
+                        <td>Processes <code>WeakReference</code>, <code>SoftReference</code>, <code>PhantomReference</code> objects</td>
+                    </tr>
+                    <tr>
+                        <td><code>Common-Cleaner</code></td>
+                        <td>Modern replacement for finalizers — processes <code>Cleaner</code> actions</td>
+                    </tr>
+                    <tr>
+                        <td><code>Notification Thread</code></td>
+                        <td>JVM internal event notification (JMX, management)</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>All of these are daemon threads. They exist only to support user threads. When all user threads exit, these are killed immediately — which is exactly correct behavior. You don't want the JVM to stay alive just because the garbage collector is mid-cycle.</p>
+            <p><strong>The insight:</strong> You can never run a Java application without threads. Even "single-threaded" code runs on the main thread with several daemon threads active in the background.</p>
+
+            <h3>Daemon Threads vs. User Threads</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th>User Thread</th>
+                        <th>Daemon Thread</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Default?</strong></td>
+                        <td>Yes — all threads are user threads by default</td>
+                        <td>Must be set explicitly before <code>start()</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>JVM exit behavior</strong></td>
+                        <td>JVM waits for all user threads to finish</td>
+                        <td>JVM terminates daemon threads immediately when no user threads remain</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Typical role</strong></td>
+                        <td>Core application work: request handling, computation, business logic</td>
+                        <td>Background support: GC, monitoring, logging, housekeeping</td>
+                    </tr>
+                    <tr>
+                        <td><strong>API</strong></td>
+                        <td>Default (<code>setDaemon(false)</code>)</td>
+                        <td><code>setDaemon(true)</code> — must be called before <code>start()</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Examples</strong></td>
+                        <td>Your <code>Runner</code> threads, web server request handlers</td>
+                        <td>JVM's <code>Finalizer</code>, <code>Reference Handler</code>, timer callbacks</td>
+                    </tr>
+                </tbody>
+            </table>
+            <pre><code class="language-java">Thread worker = new Thread(() -> {
+    while (true) {
+        monitor();           // background monitoring loop
+        try { Thread.sleep(1000); } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            break;
+        }
+    }
+}, "health-monitor");
+
+worker.setDaemon(true);   // MUST be called before start()
+worker.start();
+
+// When all user threads finish, the JVM will kill "health-monitor" immediately
+// No cleanup code in the daemon thread's loop will run after this point</code></pre>
+            <p><strong>Critical rule:</strong> <code>setDaemon(true)</code> must be called <strong>before</strong> <code>start()</code>. Calling it after <code>start()</code> throws <code>IllegalThreadStateException</code>. This is because the daemon status is baked into the OS thread at creation time.</p>
+            <p><strong>Practical implication for daemon thread design:</strong> Because daemon threads can be killed at any moment without warning when the JVM exits, they must never:
+            </p><ul>
+                <li>Hold file handles or database connections that need explicit closing</li>
+                <li>Be in the middle of writing to a file (partial writes)</li>
+                <li>Hold locks (locks would be released abruptly, leaving shared state inconsistent)</li>
+            </ul>
+            <p>Use daemon threads only for stateless or best-effort background work where abrupt termination is acceptable.</p>
+
+            <h3>Thread Priority</h3>
+            <pre><code class="language-java">// Priority range: Thread.MIN_PRIORITY (1) to Thread.MAX_PRIORITY (10)
+// Default: Thread.NORM_PRIORITY (5)
+
+Thread low    = new Thread(task, "low-priority-thread");
+Thread normal = new Thread(task, "normal-priority-thread");
+Thread high   = new Thread(task, "high-priority-thread");
+
+low.setPriority(Thread.MIN_PRIORITY);    // 1
+normal.setPriority(Thread.NORM_PRIORITY); // 5 (default — same as not setting it)
+high.setPriority(Thread.MAX_PRIORITY);   // 10
+
+low.start();
+normal.start();
+high.start();
+// Actual execution order: non-deterministic despite the priorities</code></pre>
+            <p><strong>Why priority is a hint, not a guarantee:</strong> Java's thread scheduler is not a part of the JVM — it <em>is</em> the OS scheduler. The JVM passes priority hints to the OS, but different OSes interpret them differently:</p>
+            <ul>
+                <li><strong>Windows</strong>: Maps Java's 1–10 scale to Windows thread priority classes. Honors priorities more than other OSes — you may see some effect.</li>
+                <li><strong>Linux</strong>: The default scheduler (CFS — Completely Fair Scheduler) largely ignores Java thread priorities. All threads get fair CPU time regardless.</li>
+                <li><strong>macOS</strong>: Similar to Linux — priorities are suggestions at best.</li>
+            </ul>
+            <p><strong>Thread starvation:</strong> If high-priority threads always run, low-priority threads might never execute — called <strong>starvation</strong>. Java's scheduler design intentionally avoids pure priority scheduling to prevent this. Even a low-priority thread will eventually get CPU time.</p>
+            <p><strong>The practical rule:</strong> Do not design correctness or ordering guarantees around thread priority. If thread A must run before thread B, use <code>join()</code>, not priority. Priorities are only useful as a loose performance hint to the OS — and even then, test your assumption on the target OS before relying on it.</p>
+
+            <h3>Is Multithreading Faster Than Sequential? (The Real Answer)</h3>
+            <p>This is one of the most common interview questions and the most misunderstood topic for beginners.</p>
+
+            <p><strong>On a single-CPU machine:</strong></p>
+            <pre><code>Sequential:
+ CPU: [===Task A===][===Task B===]
+ Total time = time(A) + time(B)
+
+Multi-threaded (same single CPU, time-slicing):
+ CPU: [=A=][=B=][=A=][=B=][=A=][=B=]
+           ↑     ↑     ↑
+      context context context
+       switch  switch  switch
+ Total time = time(A) + time(B) + (n × context_switch_cost)</code></pre>
+            <p><strong>Conclusion for single CPU: multithreading is always slower than sequential</strong> due to context-switch overhead. The CPU does the same total work, plus extra overhead on every thread switch.</p>
+
+            <p><strong>On a multi-CPU machine (what modern hardware actually is):</strong></p>
+            <pre><code>Sequential (still uses only 1 core):
+ Core 0: [===Task A===][idle        ]
+ Core 1: [idle        ][===Task B===]
+
+Multi-threaded (OS assigns threads to separate cores):
+ Core 0: [===Task A===]
+ Core 1: [===Task B===]
+ Total time ≈ max(time(A), time(B))   — parallel speedup!</code></pre>
+            <p><strong>Conclusion for multi-CPU: multithreading can be dramatically faster</strong> — wall-clock time approaches the duration of the longest task, not the sum of all tasks.</p>
+
+            <p><strong>But even on multi-core hardware, multithreading isn't always faster:</strong></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Scenario</th>
+                        <th>Multithreading helps?</th>
+                        <th>Why</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Tasks are independent, long-running, CPU-bound</td>
+                        <td>✅ Yes</td>
+                        <td>Each task runs on its own core</td>
+                    </tr>
+                    <tr>
+                        <td>Tasks are tiny (microseconds each)</td>
+                        <td>❌ No</td>
+                        <td>Thread creation + context-switch overhead dominates</td>
+                    </tr>
+                    <tr>
+                        <td>Algorithm is inherently sequential (each step depends on previous)</td>
+                        <td>❌ No</td>
+                        <td>Can't parallelize — no independent sub-tasks</td>
+                    </tr>
+                    <tr>
+                        <td>I/O-bound tasks (network, disk waits)</td>
+                        <td>✅ Yes</td>
+                        <td>Waiting threads park (zero CPU), other threads run</td>
+                    </tr>
+                    <tr>
+                        <td>Too many threads for available cores</td>
+                        <td>❌ Diminishing returns</td>
+                        <td>Context-switch overhead increases; performance curves down</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><strong>The correct mental model:</strong> Multithreading's value is not always raw speed — it's also <strong>concurrency</strong> (responsiveness: keeping the UI alive while background work runs) and <strong>resource utilization</strong> (keeping CPU busy during I/O waits). These benefits exist even on a single CPU.</p>
+        </section>
+
+        <section id="senior-level-practical-implementation">
+            <h2>3. Senior-Level Practical Implementation</h2>
+
+            <h3>Complete Working Example: All Thread Creation Patterns</h3>
+            <pre><code class="language-java">package com.example.threads;
+
+public class ThreadCreationPatterns {
+
+    // Pattern 1: Named class implementing Runnable (preferred for complex tasks)
+    static class DataProcessor implements Runnable {
+        private final String dataSource;
+
+        DataProcessor(String dataSource) {
+            this.dataSource = dataSource;
+        }
+
+        @Override
+        public void run() {
+            for (int i = 0; i < 5; i++) {
+                System.out.printf("[%s] Processing batch %d%n",
+                    Thread.currentThread().getName(), i);
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();   // restore interrupt flag
+                    System.out.println(Thread.currentThread().getName() + " interrupted — stopping");
+                    return;
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+
+        // Pattern 1: Class implements Runnable
+        Thread t1 = new Thread(new DataProcessor("db-source"), "db-processor");
+
+        // Pattern 2: Lambda expression (for simple tasks)
+        Thread t2 = new Thread(() -> {
+            for (int i = 0; i < 5; i++) {
+                System.out.printf("[%s] Step %d%n",
+                    Thread.currentThread().getName(), i);
+                try { Thread.sleep(150); } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }, "lambda-worker");
+
+        // Pattern 3: Extends Thread (less preferred)
+        Thread t3 = new Thread("extending-thread") {
+            @Override
+            public void run() {
+                System.out.println("[" + getName() + "] Running");
+            }
+        };
+
+        System.out.println("=== Starting threads ===");
+        t1.start();
+        t2.start();
+        t3.start();
+
+        // Join: wait for all to complete before printing summary
+        t1.join();
+        t2.join();
+        t3.join();
+
+        System.out.println("=== All threads finished ===");
+    }
+}</code></pre>
+
+            <h3>Real-World Use Case: Image Pipeline with Thread Coordination</h3>
+            <p>The course's download-then-process example, fully implemented with correct <code>join()</code> coordination:</p>
+            <pre><code class="language-java">import java.util.ArrayList;
+import java.util.List;
+
+public class ImagePipeline {
+
+    // Shared state (will be protected by synchronization in later lectures;
+    // for now we use join() to ensure no concurrent access)
+    static List&lt;String&gt; downloadedImages = new ArrayList&lt;&gt;();
+
+    public static void main(String[] args) {
+
+        // Stage 1: Download images (worker thread)
+        Thread downloader = new Thread(() -> {
+            System.out.println("[downloader] Starting download...");
+            for (int i = 1; i &lt;= 5; i++) {
+                try {
+                    Thread.sleep(300);   // simulate network latency per image
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                downloadedImages.add("image_" + i + ".jpg");
+                System.out.println("[downloader] Downloaded image_" + i + ".jpg");
+            }
+            System.out.println("[downloader] All images downloaded.");
+        }, "image-downloader");
+
+        // Stage 2: Process images — MUST wait for download to complete
+        Thread processor = new Thread(() -> {
+            System.out.println("[processor] Starting processing...");
+            for (String image : downloadedImages) {   // safe: only runs after join()
+                System.out.println("[processor] Applying filters to: " + image);
+                try { Thread.sleep(100); } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+            System.out.println("[processor] Processing complete.");
+        }, "image-processor");
+
+        downloader.start();
+
+        // ← Critical join point. Without this, processor starts immediately
+        //   and downloadedImages is still empty.
+        try {
+            downloader.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+
+        processor.start();   // safe to start now — download is guaranteed done
+
+        try {
+            processor.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+
+        System.out.println("[main] Pipeline complete. " + downloadedImages.size() + " images processed.");
+    }
+}</code></pre>
+
+            <h3>Real-World Use Case: Daemon Thread for Health Monitoring</h3>
+            <pre><code class="language-java">public class ApplicationServer {
+
+    public static void main(String[] args) throws InterruptedException {
+
+        // Daemon: background health monitor — should not prevent JVM shutdown
+        Thread healthMonitor = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                System.out.println("[health-monitor] Heap used: " +
+                    (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1024 / 1024 + "MB");
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }, "health-monitor");
+
+        healthMonitor.setDaemon(true);   // Must be before start()
+        healthMonitor.start();
+
+        // User thread: core application work
+        Thread requestHandler = new Thread(() -> {
+            System.out.println("[request-handler] Handling requests...");
+            try {
+                Thread.sleep(5000);   // simulate 5 seconds of request handling
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            System.out.println("[request-handler] Done.");
+        }, "request-handler");
+
+        requestHandler.start();
+        requestHandler.join();   // main thread waits for user work to complete
+
+        System.out.println("[main] All user threads done. JVM will now exit.");
+        // health-monitor daemon thread is killed here automatically — no action needed
+    }
+}</code></pre>
+
+            <h3>Listing All Active JVM Threads (Diagnostic Utility)</h3>
+            <pre><code class="language-java">public class ThreadDiagnostics {
+
+    public static void printAllThreads() {
+        System.out.printf("%-35s | %-15s | %-10s | %s%n",
+            "Thread Name", "State", "Priority", "Daemon");
+        System.out.println("-".repeat(80));
+
+        Thread.getAllStackTraces().keySet()
+              .stream()
+              .sorted((a, b) -> Boolean.compare(a.isDaemon(), b.isDaemon()))
+              .forEach(t -> System.out.printf("%-35s | %-15s | %-10d | %s%n",
+                  t.getName(), t.getState(), t.getPriority(), t.isDaemon()));
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        Thread worker = new Thread(() -> {
+            try { Thread.sleep(5000); } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "my-worker");
+        worker.start();
+
+        Thread.sleep(100);   // let threads initialize
+        printAllThreads();
+
+        worker.join();
+    }
+}</code></pre>
+            <p>This is invaluable during development to understand what the JVM is actually managing, and in production as a first-pass diagnostic before reaching for <code>jstack</code>.</p>
+        </section>
+
+        <section id="deep-dive-tradeoffs">
+            <h2>4. Deep Dive: Tradeoffs, Architecture & Performance</h2>
+
+            <h3>Performance: Context-Switch Cost in Detail</h3>
+            <p>Every context switch involves the CPU:</p>
+            <ol>
+                <li>Saving current thread's PC register, stack pointer, and all general-purpose registers</li>
+                <li>Updating the thread's state in the OS kernel</li>
+                <li>Loading the next thread's saved registers</li>
+                <li>Flushing/invalidating CPU pipeline</li>
+                <li>L1/L2 cache cold-start: the new thread's working data must be fetched from RAM into cache</li>
+            </ol>
+            <p>On modern x86 hardware with HotSpot JVM: ~1–10 microseconds per switch, plus cache miss penalties that can add another 100–300 nanoseconds per cache line miss. For tasks that take milliseconds, this overhead is negligible. For tasks that take microseconds (tight loops, simple arithmetic), context-switch cost can exceed the actual work cost — making multithreading strictly slower.</p>
+
+            <h3>Tradeoff Matrix: Thread Creation Approaches</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Approach</th>
+                        <th>Flexibility</th>
+                        <th>Code Clarity</th>
+                        <th>Best For</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>implements Runnable</code></td>
+                        <td>High (can extend other classes)</td>
+                        <td>Clear separation of task/thread</td>
+                        <td>Complex tasks, reusable logic</td>
+                    </tr>
+                    <tr>
+                        <td>Lambda expression</td>
+                        <td>High</td>
+                        <td>Concise, modern</td>
+                        <td>Simple one-off tasks, small closures</td>
+                    </tr>
+                    <tr>
+                        <td>Anonymous inner class</td>
+                        <td>High</td>
+                        <td>Verbose, dated</td>
+                        <td>Legacy code; use lambda instead</td>
+                    </tr>
+                    <tr>
+                        <td><code>extends Thread</code></td>
+                        <td>Low (inheritance used up)</td>
+                        <td>Clear but limiting</td>
+                        <td>Simple scripts, never in production libs</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>The <code>join()</code> Guarantee: What It Does and Doesn't Provide</h3>
+            <p><code>join()</code> provides a strict happens-before guarantee per the JMM: everything a thread does before it terminates is visible to the thread that calls <code>join()</code> after <code>join()</code> returns.</p>
+            <pre><code class="language-java">List&lt;String&gt; results = new ArrayList&lt;&gt;();   // shared state
+
+Thread worker = new Thread(() -> {
+    results.add("computed value");  // write
+});
+worker.start();
+worker.join();   // join() guarantees the write above is visible here
+System.out.println(results.get(0));  // "computed value" — safe, no synchronization needed</code></pre>
+            <p>This is one of the few ways in Java to safely share data between threads without explicit synchronization — by ensuring threads don't overlap in time (the writer finishes completely before the reader starts). This pattern breaks down the moment multiple threads access shared data concurrently — that's when you need <code>synchronized</code>, <code>volatile</code>, and locks (coming in the next section).</p>
+
+            <h3>Common Pitfalls at This Stage</h3>
+            <h4>1. Calling <code>run()</code> Instead of <code>start()</code></h4>
+            <pre><code class="language-java">Thread t = new Thread(() -> System.out.println("On: " + Thread.currentThread().getName()));
+t.run();    // prints "On: main" — no new thread, sequential execution
+t.start();  // prints "On: Thread-0" — new OS thread created</code></pre>
+            <p>Silent bug. No exception. Never do this.</p>
+
+            <h4>2. Calling <code>setDaemon()</code> After <code>start()</code></h4>
+            <pre><code class="language-java">Thread t = new Thread(task, "monitor");
+t.start();
+t.setDaemon(true);  // IllegalThreadStateException — too late</code></pre>
+            <p>Daemon status must be set before the OS thread is created. Always place <code>setDaemon()</code> before <code>start()</code>.</p>
+
+            <h4>3. Swallowing <code>InterruptedException</code></h4>
+            <pre><code class="language-java">// WRONG — kills the interrupt signal permanently
+try { Thread.sleep(1000); } catch (InterruptedException e) { /* ignore */ }
+
+// CORRECT — restore the flag so callers can observe the interruption
+try { Thread.sleep(1000); } catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+}</code></pre>
+            <p>Swallowing <code>InterruptedException</code> prevents graceful shutdown mechanisms from working. This becomes critical once you reach thread pools and <code>ExecutorService</code> (lecture 45+), where interrupts are the primary shutdown signal.</p>
+
+            <h4>4. Forgetting That Main Thread Doesn't Wait for Child Threads</h4>
+            <pre><code class="language-java">public static void main(String[] args) {
+    new Thread(() -> {
+        try { Thread.sleep(2000); } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        System.out.println("Worker done");
+    }).start();
+
+    System.out.println("Main done");   // prints FIRST — main doesn't wait
+    // JVM stays alive because the worker (user thread) is still running
+}</code></pre>
+            <p>If you need the main thread to wait, you must call <code>join()</code> explicitly. Main does not implicitly wait.</p>
+
+            <h4>5. Depending on Thread Priority for Ordering</h4>
+            <pre><code class="language-java">// WRONG: This is not a reliable ordering mechanism
+highPriorityThread.setPriority(Thread.MAX_PRIORITY);
+lowPriorityThread.setPriority(Thread.MIN_PRIORITY);
+highPriorityThread.start();
+lowPriorityThread.start();
+// "highPriorityThread runs first" is not guaranteed — OS may ignore priorities entirely</code></pre>
+            <p>If order matters, use <code>join()</code>. If coordination matters, use synchronization primitives (upcoming lectures).</p>
+
+            <h3>Architectural Impact</h3>
+            <p><strong>Why this section matters for what comes next:</strong> Every concept introduced in the upcoming section (synchronization, locks, <code>wait()</code>/<code>notify()</code>) exists because of one fact established here: threads share the heap, and <code>join()</code> is the <em>only</em> coordination tool introduced so far. <code>join()</code> is too coarse for most real-world scenarios — it completely serializes two threads at a point in time. What you need are finer-grained coordination mechanisms that let threads cooperate <em>while both running</em> — that's exactly what synchronization provides.</p>
+            <p>The thread creation patterns (<code>Runnable</code> vs <code>extends Thread</code>) established here are permanent. Even when you move to thread pools (<code>ExecutorService</code> in lecture 45) and <code>CompletableFuture</code> (lecture 119), you're still ultimately submitting <code>Runnable</code> or <code>Callable</code> tasks — the abstraction just manages the <code>Thread</code> lifecycle for you.</p>
+        </section>
+
+        <section id="interview-questions">
+            <h2>5. Interview Questions & Answers</h2>
+
+            <h3>Basic</h3>
+            <dl>
+                <dt><strong>Q1: What are the three ways to create a thread in Java and which is preferred?</strong></dt>
+                <dd>Three approaches: (1) Implement the <code>Runnable</code> interface and override <code>run()</code>, then pass the instance to <code>new Thread(runnable)</code>. (2) Use a lambda expression since <code>Runnable</code> is a functional interface — <code>new Thread(() -> { ... })</code>. (3) Extend the <code>Thread</code> class and override <code>run()</code>, then call <code>start()</code> on the subclass instance. The <code>implements Runnable</code> approach (or lambda) is strongly preferred in production because it doesn't consume the class's single inheritance slot — your task class can still extend a domain class. Extending <code>Thread</code> should be reserved for cases where you genuinely need to customize the thread's behavior itself, not just the task it runs, which is rare.</dd>
+
+                <dt><strong>Q2: What is the difference between <code>thread.start()</code> and <code>thread.run()</code>?</strong></dt>
+                <dd><code>start()</code> creates a new OS thread via <code>pthread_create()</code> (Linux) or <code>CreateThread()</code> (Windows), registers it with the JVM scheduler, and executes <code>run()</code> on that new thread. <code>start()</code> returns immediately on the calling thread — it does not wait. <code>run()</code> is a plain Java method call — it executes on the calling thread with zero OS thread creation and zero concurrency. The code appears to run but does so sequentially, making it functionally identical to calling any other method. This is a silent bug: no exception is thrown, output looks normal, and the mistake only reveals itself as a performance failure under load. Always use <code>start()</code>.</dd>
+
+                <dt><strong>Q3: What is a daemon thread and how do you create one?</strong></dt>
+                <dd>A daemon thread is a background thread that the JVM will not wait for when shutting down. When all non-daemon (user) threads finish, the JVM terminates immediately and kills any remaining daemon threads — even if they are mid-execution. Create one by calling <code>thread.setDaemon(true)</code> before <code>thread.start()</code> — calling it after <code>start()</code> throws <code>IllegalThreadStateException</code>. Daemon threads are appropriate for background support tasks (monitoring, GC, logging) where abrupt termination is acceptable. They must never hold resources that need explicit cleanup (file handles, DB connections) because their cleanup code will not run on JVM exit. All JVM internal threads (Finalizer, Reference Handler, GC threads) are daemon threads.</dd>
+            </dl>
+
+            <h3>Intermediate</h3>
+            <dl>
+                <dt><strong>Q4: You have two tasks where Task B must use the results of Task A. You run them as separate threads. What is wrong with this code and how do you fix it?</strong></dt>
+                <dd>
+<pre><code class="language-java">Thread a = new Thread(() -> computeResult());
+Thread b = new Thread(() -> useResult());   // depends on computeResult()'s output
+a.start();
+b.start();  // BUG: b starts immediately, result may not exist yet</code></pre>
+                    The bug is that <code>start()</code> returns immediately and both threads begin concurrently. Thread B may start reading the result before Thread A has written it, producing incorrect behavior — or in the best case, an empty/null result. Fix: call <code>a.join()</code> between starting A and starting B. <code>join()</code> parks the calling thread in <code>WAITING</code> state (zero CPU) until Thread A terminates. The JMM guarantees that everything Thread A wrote before terminating is visible to the thread that called <code>join()</code> after it returns. This makes it safe to start Thread B immediately after <code>a.join()</code> without any additional synchronization.
+                </dd>
+
+                <dt><strong>Q5: Is multithreading always faster than sequential execution? Justify your answer.</strong></dt>
+                <dd>No — and the answer depends on three factors. On a single-CPU machine, multithreading is <em>always</em> slower than sequential because the same CPU does the same total work plus context-switch overhead (saving/restoring registers, cache invalidation) on every thread switch. On a multi-CPU machine, multithreading can be dramatically faster for independent, long-running tasks because they run truly in parallel on separate cores — wall-clock time approaches the duration of the longest task rather than the sum of all tasks. However, even on multi-core hardware, multithreading is slower when tasks are too small (context-switch cost dominates), too many threads compete for too few cores (scheduling overhead rises), or the algorithm is inherently sequential (no independent sub-tasks to parallelize). Multithreading's value is also not purely about speed — keeping a UI responsive while background work runs, or keeping a CPU busy during I/O waits, are valid reasons to use threads even when raw throughput doesn't improve.</dd>
+
+                <dt><strong>Q6: Why is thread priority unreliable in Java and what should you use instead?</strong></dt>
+                <dd>Thread priority in Java is a suggestion to the OS scheduler, not a command. The JVM translates Java's 1–10 scale into OS-level hints, but different operating systems interpret them differently: Windows honors Java priorities more directly, while Linux's CFS (Completely Fair Scheduler) largely ignores them — all threads receive approximately equal CPU time regardless of priority. Additionally, the JVM intentionally avoids pure priority scheduling to prevent starvation — a thread with priority 1 will eventually run even if priority-10 threads are present. The result is that execution order based on priority is non-deterministic across OSes and JVM implementations. For ordering: use <code>join()</code>. For mutual exclusion: use <code>synchronized</code> or <code>ReentrantLock</code> (upcoming lectures). Thread priority can serve as a loose performance hint on specific OSes but should never be the basis of correctness logic.</dd>
+            </dl>
+
+            <h3>Advanced</h3>
+            <dl>
+                <dt><strong>Q7: Explain the <code>join()</code> happens-before guarantee and when it makes synchronization unnecessary.</strong></dt>
+                <dd>The JMM specifies that a thread's termination happens-before the return of <code>join()</code> in any other thread. This means all writes performed by the joining thread — to any variable, shared or not — are guaranteed visible to the thread that called <code>join()</code>, without any <code>synchronized</code>, <code>volatile</code>, or atomic operations. Practically: if Thread A writes data and terminates, and Thread B calls <code>a.join()</code> before reading that data, Thread B is guaranteed to see the writes. This is safe specifically because there is no temporal overlap — A has finished before B reads. This guarantee breaks down entirely if both threads were running concurrently. The <code>join()</code> pattern effectively serializes threads at a point in time, creating a non-overlapping access window that eliminates data visibility concerns. This is why it's appropriate for pipeline-style threading (download then process) but insufficient for producer-consumer patterns where threads must genuinely run simultaneously and share data while both active — that requires <code>synchronized</code> or locks.</dd>
+
+                <dt><strong>Q8: A production service runs 50 background monitoring daemon threads. The JVM is slow to start up. What is wrong and how would you diagnose and fix it?</strong></dt>
+                <dd>Each thread, daemon or not, requires OS resources at creation: a kernel thread descriptor, stack memory (512KB–1MB by default), and initialization in the JVM's thread table. Fifty threads at startup means 50 <code>pthread_create()</code> calls, ~25–50MB of native stack memory, and significant OS scheduling overhead — all before the application has served a single request. Diagnosis: measure startup time before and after adding monitoring threads; use <code>jstack</code> on the running JVM to see 50 daemon threads all in <code>TIMED_WAITING</code> (sleeping in their monitoring loops) — this shows they're doing nothing useful at startup. Fix: (1) Consolidate multiple monitoring concerns into fewer threads — a single monitoring thread can check heap, CPU, connection counts, and log them together. (2) Delay daemon thread startup until after the application is warm — use a scheduled check that begins after a startup grace period. (3) Consider whether 50 independent threads are the right architecture at all — a single scheduled task running on a timer thread (itself a daemon) can poll multiple metrics in sequence. In production, creating threads has a cost that must be justified by necessity, not convenience.</dd>
+
+                <dt><strong>Q9: What happens to daemon threads' state (open files, database connections, held locks) when the JVM kills them on exit?</strong></dt>
+                <dd>The JVM terminates daemon threads by calling the underlying OS thread termination mechanism without running any further Java code in those threads. This means: (1) <strong>No <code>finally</code> blocks execute</strong> in the daemon thread — any resource cleanup code in <code>finally</code> is skipped. Open file streams, database connections, and network sockets become leaked from Java's perspective. The OS will reclaim the file descriptors when the process exits, but this bypass any application-level cleanup (flushing buffers, committing transactions, sending close handshakes). (2) <strong>Held locks are released abruptly</strong> — if a daemon thread holds a <code>synchronized</code> lock and is killed mid-critical-section, the monitor is released by the JVM but the shared data it was protecting may be in an inconsistent intermediate state. Any user thread that subsequently acquires that lock will see corrupted state. (3) <strong>Partial writes to shared data</strong> — a daemon thread in the middle of writing a multi-field update to a shared object is killed mid-update; readers see partial state. This is why daemon threads must be designed for stateless or best-effort work only. Never use a daemon thread for transaction management, file writing, or any operation where mid-stream termination produces corrupt state.</dd>
+            </dl>
+        </section>
+
+        <section id="mastery-checklist">
+            <h2>6. Mastery Checklist</h2>
+            <p>After internalizing these notes, you should be able to:</p>
+            <ul>
+                <li><strong>Write</strong> a thread using all three approaches (<code>implements Runnable</code>, lambda, <code>extends Thread</code>) and correctly explain the JVM/OS operations triggered by each</li>
+                <li><strong>Explain</strong> precisely what happens at the OS level when <code>thread.start()</code> is called vs. <code>thread.run()</code> — and why the latter is a silent bug that won't throw an exception</li>
+                <li><strong>Implement</strong> <code>Thread.sleep()</code> correctly, including the mandatory <code>InterruptedException</code> handling pattern (restoring the interrupt flag, not swallowing it)</li>
+                <li><strong>Use</strong> <code>thread.join()</code> to create explicit ordering guarantees between threads, explain the JMM happens-before guarantee it provides, and identify when <code>join()</code> makes additional synchronization unnecessary</li>
+                <li><strong>Distinguish</strong> daemon threads from user threads on every axis: JVM exit behavior, appropriate use cases, when <code>setDaemon()</code> must be called, and what cleanup guarantees do NOT exist for daemon threads</li>
+                <li><strong>Use</strong> <code>Thread.getAllStackTraces()</code> to list active JVM threads, identify the JVM's built-in daemon threads (Finalizer, Reference Handler, Common-Cleaner), and explain their purpose</li>
+                <li><strong>Explain</strong> thread priority's 1–10 scale, why it is OS-dependent and non-deterministic, why <code>setPriority()</code> should never be used for ordering guarantees, and what to use instead</li>
+                <li><strong>Answer</strong> the "is multithreading faster than sequential?" question correctly for both single-CPU and multi-CPU scenarios, naming the specific costs (context-switch overhead, cache invalidation) that make multithreading slower in certain conditions</li>
+                <li><strong>Identify</strong> the three production pitfalls in this section (calling <code>run()</code> not <code>start()</code>, <code>setDaemon()</code> after <code>start()</code>, swallowing <code>InterruptedException</code>) and write the correct version of each</li>
+                <li><strong>Name all threads</strong> in production code and articulate specifically what value named threads provide during a thread dump incident diagnostic</li>
+                <li><strong>Explain</strong> why <code>join()</code> is insufficient for producer-consumer patterns where threads must share data while both are running, and identify that this is the motivation for the synchronization mechanisms in the next section</li>
+            </ul>
+        </section>
+    </div>
+</body>
+</html>
