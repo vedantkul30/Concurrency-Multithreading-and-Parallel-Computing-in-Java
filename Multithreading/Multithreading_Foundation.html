@@ -9,22 +9,67 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             margin: 0;
-            padding: 20px;
+            padding: 0; /* Remove body padding, handled by main-content */
             background-color: #f4f7f6;
             color: #333;
+            display: flex; /* Use flexbox for layout with sidebar */
         }
-        .container {
-            max-width: 1000px;
-            margin: auto;
+        .sidebar {
+            width: 250px; /* Fixed width for the sidebar */
+            background-color: #2c3e50; /* Dark background for the sidebar */
+            color: #ecf0f1;
+            padding: 20px 0; /* Vertical padding */
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            position: sticky; /* Sticky sidebar */
+            top: 0;
+            height: 100vh; /* Full viewport height */
+            overflow-y: auto; /* Scrollable if content overflows */
+        }
+        .sidebar h3 {
+            color: #3498db; /* Highlight sidebar title */
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            padding: 0 15px;
+            font-size: 1.3em;
+            border-bottom: 1px solid #34495e;
+            padding-bottom: 10px;
+        }
+        .sidebar ul {
+            list-style: none; /* Remove bullet points */
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar li {
+            margin-bottom: 5px;
+        }
+        .sidebar a {
+            display: block; /* Make links block-level for padding */
+            color: #ecf0f1;
+            text-decoration: none;
+            padding: 10px 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #34495e; /* Hover effect */
+            color: #3498db;
+        }
+
+        .main-content {
+            flex-grow: 1; /* Main content takes remaining space */
+            max-width: 800px; /* Adjust max-width for better text alignment within content */
+            margin: 20px auto; /* Center the main content with vertical margin */
             background: #fff;
             padding: 30px 50px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
+
         h1, h2, h3, h4 {
             color: #2c3e50;
-            margin-top: 1.5em;
+            margin-top: 1.8em; /* Increased top margin for headings */
             margin-bottom: 0.8em;
+            text-align: left; /* Ensure headings are left-aligned */
         }
         h1 {
             font-size: 2.5em;
@@ -47,6 +92,7 @@
         }
         p {
             margin-bottom: 1em;
+            text-align: justify; /* Justify paragraph text for better alignment */
         }
         strong {
             color: #e74c3c;
@@ -72,6 +118,7 @@
             font-family: 'Consolas', 'Monaco', monospace;
             font-size: 0.9em;
             line-height: 1.4;
+            text-align: left; /* Ensure code blocks are left-aligned */
         }
         pre code {
             background-color: transparent;
@@ -81,6 +128,7 @@
         ul, ol {
             margin-left: 20px;
             margin-bottom: 1em;
+            text-align: left; /* Ensure lists are left-aligned */
         }
         li {
             margin-bottom: 0.5em;
@@ -89,6 +137,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 1.5em;
+            text-align: left; /* Ensure tables are left-aligned */
         }
         th, td {
             border: 1px solid #ddd;
@@ -107,32 +156,52 @@
             padding: 0.5em 20px;
             color: #555;
             font-style: italic;
+            text-align: left; /* Ensure blockquotes are left-aligned */
+        }
+        .note, .warning, .code-example {
+            padding: 15px;
+            margin: 1.5em 0;
+            border-radius: 4px;
+            text-align: left; /* Ensure these blocks are left-aligned */
         }
         .note {
             background-color: #e8f4f8;
             border-left: 4px solid #3498db;
-            padding: 15px;
-            margin: 1.5em 0;
-            border-radius: 4px;
         }
         .warning {
             background-color: #fef0f0;
             border-left: 4px solid #e74c3c;
-            padding: 15px;
-            margin: 1.5em 0;
-            border-radius: 4px;
         }
         .code-example {
             background-color: #f0f4f7;
             border-left: 3px solid #2980b9;
-            padding: 15px;
-            margin: 1.5em 0;
-            border-radius: 4px;
+        }
+        dt {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 1em;
+        }
+        dd {
+            margin-bottom: 1em;
+            padding-left: 20px;
+            text-align: justify;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="sidebar">
+        <h3>Multithreading Notes</h3>
+        <ul>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Course Content: Key Concepts</a></li>
+            <li><a href="#senior-level-practical-implementation">3. Senior-Level Implementation</a></li>
+            <li><a href="#deep-dive-tradeoffs">4. Deep Dive: Tradeoffs</a></li>
+            <li><a href="#interview-questions">5. Interview Questions & Answers</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
         <header>
             <h1>Java Multithreading: Foundations & Theory</h1>
             <h3>Principal Architect Notes — Production-Grade Mastery Series</h3>
@@ -408,310 +477,4 @@ Worker:              [downloading...]──────────────[
 <pre><code>public class StockApp {
 
     public static void main(String[] args) {
-        System.out.println("App starting on: " + Thread.currentThread().getName());
-
-        // Worker thread handles the slow operation
-        Thread dataWorker = new Thread(() -> {
-            System.out.println("Download starting on: " + Thread.currentThread().getName());
-            downloadDataset("https://finance.yahoo.com/api/historical");   // slow — 2-3 min
-            buildModel();
-            makePredictions();
-            System.out.println("Worker done.");
-        });
-
-        // Give the thread a meaningful name — critical for debugging thread dumps in production
-        dataWorker.setName("data-download-worker");
-        dataWorker.start();  // returns immediately — main thread is NOT blocked
-
-        // Main thread stays responsive — can handle UI events, heartbeats, etc.
-        System.out.println("Main thread free. Showing loading indicator...");
-        showLoadingIndicator();   // runs concurrently with the download
-    }
-
-    static void downloadDataset(String url)  { /* network I/O — slow */ }
-    static void buildModel()                 { /* computation */ }
-    static void makePredictions()            { /* inference */ }
-    static void showLoadingIndicator()       { /* UI update loop */ }
-}
-</code></pre>
-            </div>
-            <p><strong>What happens at the OS level</strong>: <code>dataWorker.start()</code> causes the JVM to call <code>pthread_create()</code>, creating a second kernel thread. The OS time-slices both threads on available cores. The main thread runs its loading indicator loop; the worker thread independently progresses through the download. If you have 2+ cores, they may run simultaneously.</p>
-
-            <h3>Real-World Use Case 2: Parallel Directory Copy — OS Behavior in Action</h3>
-            <p>The course example of copying a directory without freezing the OS explorer is a perfect real-world illustration. Here's the programmatic equivalent — a file copy that runs without blocking the calling context:</p>
-            <div class="code-example">
-<pre><code>import java.io.*;
-import java.nio.file.*;
-
-public class NonBlockingFileCopy {
-
-    // Returns immediately; copy proceeds on a background thread
-    public static void startCopyAsync(Path source, Path destination) {
-        Thread copyThread = new Thread(() -> {
-            try {
-                System.out.println("[" + Thread.currentThread().getName() + "] Copy started");
-                copyDirectory(source, destination);
-                System.out.println("[" + Thread.currentThread().getName() + "] Copy complete");
-            } catch (IOException e) {
-                // In production: publish to an error queue or callback
-                System.err.println("Copy failed: " + e.getMessage());
-            }
-        }, "file-copy-worker");    // named thread — always name your threads
-
-        copyThread.start();        // fire and continue; caller is not blocked
-    }
-
-    private static void copyDirectory(Path src, Path dst) throws IOException {
-        Files.walk(src).forEach(sourcePath -> {
-            try {
-                Path targetPath = dst.resolve(src.relativize(sourcePath));
-                Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        });
-    }
-
-    public static void main(String[] args) {
-        startCopyAsync(Path.of("/data/source"), Path.of("/data/dest"));
-
-        // Main thread continues immediately — the copy is happening in the background
-        System.out.println("Copy running in background. Main thread free.");
-        // ... handle other work here ...
-    }
-}
-</code></pre>
-            </div>
-
-            <h3>What NOT to Do: The Single-Threaded Anti-Pattern</h3>
-            <div class="code-example">
-<pre><code>// ANTI-PATTERN: Everything on the main thread
-public class BadStockApp {
-    public static void main(String[] args) {
-        initArrays();              // fast
-        downloadDataset();         // ← blocks for 20 minutes. UI frozen. User panics.
-        buildModel();              // only runs after download completes
-        makePredictions();         // only runs after model build completes
-        // The user has been staring at a frozen screen this entire time.
-    }
-}
-</code></pre>
-            </div>
-            <p>The sequential version isn't just slower from a UX perspective — it's architecturally fragile. A network timeout during the download crashes the entire app with no opportunity for the main thread to handle errors gracefully or show meaningful feedback.</p>
-
-            <h3>Always Name Your Threads</h3>
-            <p>This is a small practice with outsized production impact. When you take a thread dump (<code>jstack &lt;pid&gt;</code>) during a production incident, named threads immediately tell you what's happening:</p>
-            <div class="code-example">
-<pre><code>// Bad thread dump output:
-"Thread-0" RUNNABLE
-"Thread-1" WAITING
-"Thread-2" BLOCKED
-
-// Good thread dump output:
-"data-download-worker" RUNNABLE
-"model-training-worker" WAITING
-"prediction-engine" BLOCKED   ← instantly clear which subsystem has the problem
-</code></pre>
-            </div>
-            <div class="code-example">
-<pre><code>// Always provide a name when constructing a Thread
-Thread t = new Thread(task, "descriptive-name-here");
-
-// Or set it after construction
-t.setName("order-processor-" + orderId);
-</code></pre>
-            </div>
-        </section>
-
-        <section id="deep-dive-tradeoffs">
-            <h2>4. Deep Dive: Tradeoffs, Architecture & Performance</h2>
-
-            <h3>Performance Implications of Multithreading</h3>
-            <ul>
-                <li><strong>Context-Switch Cost</strong>: On Linux with HotSpot JVM, each context switch costs ~1–10 microseconds for register save/restore, plus indirect costs from CPU pipeline flushing and L1/L2 cache invalidation (the new thread's working data must be loaded into cache). For tight loops doing microsecond-level work, this overhead can dominate.</li>
-                <li><strong>Thread Stack Memory</strong>: Each thread's stack defaults to <strong>512KB–1MB</strong> (configurable via <code>-Xss</code>). This is native memory (outside the Java heap). With 1,000 threads: 500MB–1GB of native memory <em>just for stacks</em>, before any heap object allocation. This is a hard operational ceiling for raw thread-per-task models.</li>
-            </ul>
-
-            <h4>The Performance Curve — Why More Threads ≠ More Speed</h4>
-            <p>The relationship is not linear. It has three zones:</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Zone</th>
-                        <th>Thread Count</th>
-                        <th>What's Happening</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Under-utilized</td>
-                        <td>1 to ~nCores</td>
-                        <td>Extra threads fill idle cores — genuine speedup</td>
-                    </tr>
-                    <tr>
-                        <td>Sweet spot</td>
-                        <td>~nCores to 2×nCores</td>
-                        <td>All cores busy, minimal context switching</td>
-                    </tr>
-                    <tr>
-                        <td>Degraded</td>
-                        <td>Much more than nCores</td>
-                        <td>Context-switch overhead dominates; GC pressure from Thread objects rises; may be slower than single-threaded</td>
-                    </tr>
-                </tbody>
-            </table>
-            <p>The exact sweet spot depends on whether your work is CPU-bound (tight computations — thread count ≈ nCores) or I/O-bound (waiting on network/disk — threads spend most time in <code>WAITING</code>, so more threads are tolerable). Measuring is always better than guessing.</p>
-
-            <h3>Tradeoff Analysis: Process vs. Thread</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Dimension</th>
-                        <th>Process</th>
-                        <th>Thread</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>Creation cost</strong></td>
-                        <td>High (full memory allocation, OS bookkeeping)</td>
-                        <td>Low (new stack + PC only)</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Memory isolation</strong></td>
-                        <td>Complete (crash in one process doesn't touch others)</td>
-                        <td>None (crash in one thread can corrupt shared heap)</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Communication</strong></td>
-                        <td>Expensive (IPC: pipes, sockets, shared memory segments)</td>
-                        <td>Free (direct heap access — but needs synchronization)</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Use case</strong></td>
-                        <td>OS-level isolation, different runtimes, security boundaries</td>
-                        <td>Concurrent tasks within one application</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Java API</strong></td>
-                        <td><code>ProcessBuilder</code></td>
-                        <td><code>new Thread(...)</code>, <code>Runnable</code></td>
-                    </tr>
-                </tbody>
-            </table>
-            <p>For in-JVM concurrency, threads are always the right tool. Processes are for when you need crash isolation or are calling code in a different language/runtime.</p>
-
-            <h3>Common Pitfalls at This Stage</h3>
-            <h4>1. Calling <code>run()</code> instead of <code>start()</code></h4>
-            <p>This is the most common beginner mistake and one of the most important to internalize early:</p>
-            <div class="code-example">
-<pre><code>Thread t = new Thread(() -> System.out.println("Thread: " + Thread.currentThread().getName()));
-
-t.run();    // WRONG: executes run() on the CURRENT thread — no new thread is created
-            // Output: "Thread: main"
-
-t.start();  // CORRECT: asks the JVM to create a new OS thread and execute run() on it
-            // Output: "Thread: Thread-0"
-</code></pre>
-            </div>
-            <p>When you call <code>run()</code> directly, you're just calling a method. No new thread. No OS thread creation. The <code>start()</code> method is what triggers <code>pthread_create()</code> internally.</p>
-
-            <h4>2. Assuming Thread Execution Order</h4>
-            <div class="code-example">
-<pre><code>Thread t1 = new Thread(() -> System.out.println("T1"));
-Thread t2 = new Thread(() -> System.out.println("T2"));
-t1.start();
-t2.start();
-// Output is non-deterministic: could be T1 then T2, or T2 then T1
-// NEVER rely on this ordering without explicit synchronization
-</code></pre>
-            </div>
-            <p>The OS scheduler decides execution order. It can — and will — vary between runs, between machines, and between JVM versions. Code that accidentally depends on a particular ordering is a latent bug waiting for production conditions to reveal it.</p>
-
-            <h4>3. Forgetting That the Main Thread Can End Before Worker Threads</h4>
-            <div class="code-example">
-<pre><code>public static void main(String[] args) {
-    Thread worker = new Thread(() -> {
-        try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-        System.out.println("Worker done");  // May or may not print
-    });
-    worker.start();
-    System.out.println("Main done");
-    // main() returns here — but the JVM keeps running because 'worker' is still alive
-    // (User threads keep the JVM alive; this is covered in the Daemon Threads lecture)
-}
-</code></pre>
-            </div>
-            <p>The JVM does not exit when <code>main()</code> returns — it exits when all <strong>user threads</strong> finish. (Daemon threads are an exception — covered in lecture 18.)</p>
-
-            <h4>4. Not Naming Threads</h4>
-            <p>Anonymous threads named <code>Thread-0</code>, <code>Thread-1</code> in production thread dumps during incidents waste critical debugging time. Always name threads with their purpose.</p>
-
-            <h3>Architectural Impact: Why This Foundation Matters for Everything That Follows</h3>
-            <p>Every advanced concurrency topic in this course — synchronization, locks, <code>volatile</code>, thread pools, <code>Fork-Join</code>, reactive streams, virtual threads — exists because of exactly two facts established in this section:</p>
-            <ol>
-                <li><strong>Threads share the heap</strong> → you need synchronization to protect shared data</li>
-                <li><strong>Creating threads has cost</strong> → you need thread pools and higher abstractions to manage lifecycle efficiently</li>
-            </ol>
-            <p>Understanding <em>why</em> these problems exist (shared memory + context-switch overhead) is what separates engineers who cargo-cult <code>synchronized</code> from those who design correct, performant concurrent systems. Every tool introduced in later lectures is a direct solution to a specific consequence of these two facts.</p>
-        </section>
-
-        <section id="interview-questions">
-            <h2>5. Interview Questions & Answers</h2>
-
-            <h3>Basic</h3>
-            <dl>
-                <dt><strong>Q1: What is the difference between a process and a thread?</strong></dt>
-                <dd>A process is an OS-managed instance of a running program with its own isolated memory space — separate registers, stack, and heap. No two processes share memory by default. A thread is a lightweight execution unit that lives <em>inside</em> a process, sharing the process's heap and resources with sibling threads. Creating a process is expensive because the OS must allocate all resources from scratch and manage parent-child relationships. Creating a thread is cheap — only a new stack and program counter register are needed. The shared heap is what makes threads powerful for communication but requires careful synchronization to prevent data corruption.</dd>
-
-                <dt><strong>Q2: What are the thread lifecycle states in Java and what triggers each transition?</strong></dt>
-                <dd>Java threads have four phases. <code>NEW</code>: the <code>Thread</code> object is instantiated but <code>start()</code> hasn't been called — no OS thread exists yet. <code>RUNNABLE</code> (with two sub-states): after <code>start()</code> is called, the OS thread is created; the thread is either waiting in the scheduler queue (runnable) or actively executing on a CPU (running) — Java's <code>Thread.State</code> API exposes these as one <code>RUNNABLE</code> state. <code>BLOCKED/WAITING</code>: entered via <code>sleep()</code>, <code>wait()</code>, <code>join()</code>, or lock contention — the thread parks, consuming zero CPU, until the condition resolves. <code>TERMINATED</code>: <code>run()</code> has returned or an uncaught exception was thrown — the OS thread is destroyed, and the <code>Thread</code> Java object becomes GC-eligible. A thread cannot be restarted once terminated; you must create a new <code>Thread</code> instance.</dd>
-
-                <dt><strong>Q3: What is the time-slicing algorithm and when does the OS use it?</strong></dt>
-                <dd>Time-slicing is the OS scheduler's strategy for sharing a single CPU core among multiple ready threads. Each thread gets a short burst of CPU time (a <em>time quantum</em>, typically 10–100ms), then the CPU saves that thread's state (registers, PC, stack pointer) and loads the state of the next thread in the ready queue. This creates the illusion of simultaneous execution on a single core. The OS uses time-slicing when there are more runnable threads than available CPU cores. When threads ≤ cores, the OS can assign one thread per core for true parallel execution. In Java, this distinction matters because you have no control over which mode is in effect — the JVM never exposes CPU affinity, and thread scheduling is entirely delegated to the OS.</dd>
-            </dl>
-
-            <h3>Intermediate</h3>
-            <dl>
-                <dt><strong>Q4: A colleague says "I added 50 threads to my algorithm and it got slower." What are the two most likely causes?</strong></dt>
-                <dd>First, <strong>context-switch saturation</strong>: with 50 threads competing on, say, 8 cores, the CPU is spending significant time saving and restoring thread state (1–10µs per switch, polluting L1/L2 caches) instead of executing the algorithm. The more threads than cores, the worse this gets. Second, <strong>the algorithm may not be sufficiently parallelizable</strong>: if most of the algorithm is sequential (data must be processed in order, or one step produces input for the next), adding threads just adds overhead without reducing the critical path. The fix is first to profile — find out whether threads are spending time computing or context-switching — then size the thread count to roughly match the number of CPU cores for CPU-bound work, and validate with benchmarks. (Formal analysis of parallelizability is covered later in Amdahl's Law.)</dd>
-
-                <dt><strong>Q5: Why does calling <code>run()</code> directly on a <code>Thread</code> object work without throwing an exception, yet produce completely wrong behavior?</strong></dt>
-                <dd>Because <code>Thread</code> implements <code>Runnable</code>, and <code>run()</code> is just a regular method. Calling <code>t.run()</code> directly invokes that method on the <em>calling thread</em> — identical to calling any other method. No OS thread is created, no JVM thread is registered, and <code>Thread.currentThread()</code> inside <code>run()</code> returns the <em>caller's</em> thread, not <code>t</code>. The program appears to work (the code inside <code>run()</code> executes), but it executes sequentially on the current thread with zero concurrency benefit. This is a silent bug — no exception, no warning, just wrong behavior that can pass unit tests and only reveal itself as a performance problem under load. <code>start()</code> is what triggers <code>pthread_create()</code> under the hood and registers the thread with the JVM's thread scheduler.</dd>
-
-                <dt><strong>Q6: The main thread's <code>main()</code> method returns, but the JVM keeps running. Why?</strong></dt>
-                <dd>The JVM's exit policy is: terminate when all <em>user threads</em> have finished, regardless of whether <code>main()</code> has returned. If <code>main()</code> starts worker threads and then returns, the JVM stays alive until all those workers complete. This is important to understand because it means resource leaks in worker threads (open connections, locks held, infinite loops) will prevent JVM shutdown indefinitely. The complement of this — <em>daemon threads</em> — are threads the JVM will <em>not</em> wait for. If only daemon threads remain when <code>main()</code> exits, the JVM terminates immediately, potentially killing those threads mid-execution. (Daemon threads are covered in lecture 18.)</dd>
-            </dl>
-
-            <h3>Advanced</h3>
-            <dl>
-                <dt><strong>Q7: Explain why thread execution order is non-deterministic in Java and what production risks this creates.</strong></dt>
-                <dd>Java deliberately does not specify a thread scheduling algorithm — the JVM delegates to the host OS scheduler. On Linux, this is the Completely Fair Scheduler (CFS); on Windows, a priority-based preemptive scheduler; each with different behaviors. Thread priorities in Java (<code>setPriority()</code>) are hints only — some OS schedulers honor them, others ignore them. The result: the order in which threads execute, and the exact interleaving of their instructions, is undefined and can differ between runs, machines, OS versions, and JVM implementations. Production risk: code with hidden ordering dependencies (e.g., Thread A assumes Thread B has already written a value to a shared variable) will pass all tests on a developer's laptop (where timing happens to produce the "right" order) and fail intermittently in production under different load or on different hardware. These bugs — called <em>heisenbugs</em> — are extraordinarily expensive to diagnose. The engineering response is: never assume execution order; always use explicit synchronization mechanisms to establish ordering guarantees. (What those mechanisms are is the entire subject of the next section of this course.)</dd>
-
-                <dt><strong>Q8: Walk through what happens at the OS and JVM level when <code>thread.start()</code> is called on a Java thread.</strong></dt>
-                <dd>When <code>thread.start()</code> is called: (1) The JVM checks that the thread is in <code>NEW</code> state — calling <code>start()</code> on an already-started thread throws <code>IllegalThreadStateException</code>. (2) The JVM calls the native method <code>Thread.start0()</code>, which is implemented in the JVM's C++ layer. (3) In HotSpot on Linux, this calls <code>pthread_create()</code>, creating a new POSIX kernel thread and registering it with the OS scheduler. The OS assigns the new thread a kernel thread ID and places it in the <code>READY</code> queue. (4) The JVM allocates a new JVM stack for the thread (default 512KB–1MB depending on platform and <code>-Xss</code> setting) and sets its Program Counter to the entry point of the <code>run()</code> method. (5) <code>start()</code> returns immediately on the <em>calling</em> thread — it does not wait for the new thread to begin executing. (6) The OS scheduler, at its discretion, begins executing the new thread's <code>run()</code> method. From this point, two threads are running concurrently. The key insight: there is a window between <code>start()</code> returning and the new thread's first instruction executing — code in that window in the calling thread happens-before the new thread's <code>run()</code> body, per the JMM, so any data set up before <code>start()</code> is safely visible to the new thread without additional synchronization.</dd>
-
-                <dt><strong>Q9: A junior engineer on your team says: "I profiled our app and saw that our 16-thread pool is spending 40% of CPU time on context switching. Should we reduce threads to 1?" How do you respond?</strong></dt>
-                <dd>Reducing to 1 thread would eliminate context-switch overhead but also eliminate all concurrency benefits — and the root cause is likely not thread <em>count</em> but thread <em>behavior</em>. First, diagnose what those 16 threads are actually doing: if they are CPU-bound tasks (computation, sorting, mathematical operations), 16 threads on, say, an 8-core machine means 2 threads per core constantly competing, and reducing to 8 threads would likely cut context-switch overhead by ~50% while preserving almost all throughput. If the threads are I/O-bound (waiting on network or database), the 40% context-switching figure is suspicious — I/O threads spend most time in <code>WAITING</code> state and should <em>not</em> be generating high context-switch rates. That pattern instead suggests threads are spinning (busy-waiting in a loop rather than blocking) — a separate and more serious bug. The correct response is: profile with OS-level tools (<code>vmstat</code>, <code>perf stat -e context-switches</code>) to measure actual switch rate, correlate with <code>jstack</code> thread states, identify whether threads are CPU-bound or I/O-bound, and then size the pool to nCores for CPU-bound work, or investigate the spinning pattern for I/O-bound work. Guessing thread count without measurement is how you trade one performance problem for another.</dd>
-            </dl>
-        </section>
-
-        <section id="mastery-checklist">
-            <h2>6. Mastery Checklist</h2>
-            <p>After internalizing these notes, you should be able to:</p>
-            <ul>
-                <li><strong>Explain</strong> to a junior engineer the exact memory layout difference between a process and a thread — what each owns exclusively (stack, PC register) versus what threads share (heap, Metaspace) — and why the shared heap is the root of all concurrency complexity</li>
-                <li><strong>Draw</strong> the complete Java thread lifecycle from <code>NEW</code> to <code>TERMINATED</code>, correctly describe what triggers each transition, and explain why <code>BLOCKED/WAITING</code> threads consume zero CPU</li>
-                <li><strong>Describe</strong> the time-slicing algorithm precisely: what the OS saves/restores during a context switch, when time-slicing is needed vs. when true parallelism is possible, and why Java gives you no control over which mode is in effect</li>
-                <li><strong>Distinguish</strong> concurrency (threads make progress, not necessarily simultaneously) from parallelism (threads execute at exactly the same instant on separate cores), and explain what determines which is happening at runtime</li>
-                <li><strong>Identify and fix</strong> the <code>run()</code> vs <code>start()</code> mistake — explain what actually happens at the OS level in each case</li>
-                <li><strong>Explain</strong> why adding more threads can make an application <em>slower</em> than single-threaded, describe the three performance zones (under-utilized, sweet spot, degraded), and state the rule of thumb for CPU-bound vs. I/O-bound thread sizing</li>
-                <li><strong>Describe</strong> the two fundamental facts (shared heap + context-switch cost) that motivate every advanced concurrency tool in the rest of this course</li>
-                <li><strong>Apply</strong> thread naming consistently and explain what a named thread buys you during a production incident thread dump</li>
-                <li><strong>Articulate</strong> why thread execution order is non-deterministic in Java, name the OS schedulers involved on Linux and Windows, and explain why <code>setPriority()</code> is not a reliable ordering mechanism</li>
-                <li><strong>Explain</strong> step-by-step what happens at the JVM and OS level when <code>thread.start()</code> is called, including the native call, stack allocation, and the JMM happens-before guarantee for data initialized before <code>start()</code></li>
-            </ul>
-        </section>
-    </div>
-</body>
-</html>
+        System.out.println
