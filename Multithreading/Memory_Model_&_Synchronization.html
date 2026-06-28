@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: Memory Model & Synchronization</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 2rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Title & Syllabus</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Definitions</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Multithreading: Memory Model & Synchronization</h1>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: -10px; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                <p><strong>Syllabus Coverage: Lectures 20–25</strong> (Memory Management · <code>synchronized</code> keyword · Intrinsic Locks · Synchronized Blocks · Object vs Class Locking)</p>
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 2rem 0;">
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            <p><strong>One-Sentence Definition:</strong><br>
+            Synchronization in Java is the mechanism by which multiple threads coordinate access to shared heap memory — using the <code>synchronized</code> keyword to ensure that only one thread at a time can execute a critical section, enforced by an intrinsic lock that every Java object automatically carries.</p>
+
+            <h3>The Architecture Analogy</h3>
+            <p>Picture a <strong>shared office whiteboard</strong> that multiple employees (threads) need to update. The whiteboard is on the wall of the shared conference room (heap memory). Everyone's personal notepad (stack memory) is private — no one else can read or write to it.</p>
+            <p>The problem: if two employees simultaneously walk up and start updating the whiteboard, the result is a garbled mess. Neither change is correct.</p>
+            <p>The solution: a <strong>room key</strong> (intrinsic lock). Before updating the whiteboard, an employee must pick up the key from the hook by the door. While they hold the key, the door is locked — no other employee can enter. When they're done, they hang the key back up, and the next employee can enter.</p>
+            <p><strong>The critical insight:</strong> Every office object — the whiteboard, the projector, the coffee machine — has <em>exactly one key</em>. If you put both the whiteboard and the projector behind the same key, then one employee updating the whiteboard blocks another from turning on the projector — even though those are completely independent operations. This is the core problem with naively synchronizing on <code>this</code>: all synchronized methods on an object share the same single key.</p>
+            <p><strong>Synchronized blocks with custom lock objects</strong> are like installing <em>separate keys for each piece of equipment</em>. Now the whiteboard key and the projector key are independent, and both can be used simultaneously by different employees.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <p><strong>Every Java object</strong> has a header in heap memory that contains a <strong>monitor</strong> (also called the intrinsic lock or mutex). This is not something you instantiate — it's built into every <code>Object</code> by the JVM.</p>
+            <p>When a thread executes <code>synchronized(obj)</code> or enters a <code>synchronized</code> method:</p>
+            <ol>
+                <li>The JVM executes the <code>monitorenter</code> bytecode instruction on <code>obj</code>'s monitor</li>
+                <li>If the monitor is unowned, the thread acquires it (sets the owner to itself, count = 1)</li>
+                <li>If the monitor is owned by <em>this same thread</em> (re-entrant), the count increments</li>
+                <li>If the monitor is owned by a <em>different thread</em>, the current thread blocks in <code>BLOCKED</code> state — zero CPU — until the monitor is released</li>
+                <li>On exit from the synchronized block/method, the JVM executes <code>monitorexit</code>, decrementing the count. When count reaches 0, the monitor is released and one waiting thread is chosen (non-deterministically) to acquire it</li>
+            </ol>
+            <div class="highlight-box">
+                <p><strong>The JMM guarantee:</strong> The <code>synchronized</code> keyword establishes a <strong>happens-before</strong> relationship. Everything a thread does inside a synchronized block happens-before anything another thread does after acquiring the same lock. This gives you both mutual exclusion <em>and</em> memory visibility — writes inside the block are flushed to main memory on exit, and reads inside the block see the latest values from main memory on entry.</p>
+            </div>
+
+            <h2 id="course-content">2. Course Content: Key Concepts & Definitions</h2>
+            
+            <h3>Stack Memory vs. Heap Memory — The Root of the Problem</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th>Stack Memory</th>
+                        <th>Heap Memory</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>What lives here</strong></td>
+                        <td>Method calls, local variables, reference variables</td>
+                        <td>Objects and their instance/static fields</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Scope</strong></td>
+                        <td>Private per thread — completely invisible to other threads</td>
+                        <td><strong>Shared across all threads in the same process</strong></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Lifetime</strong></td>
+                        <td>Exists for the duration of the method call; automatically managed</td>
+                        <td>Exists until garbage collected</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Size</strong></td>
+                        <td>Small (512KB–1MB per thread) but fast</td>
+                        <td>Large but slower to access</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Thread safety</strong></td>
+                        <td>Inherently safe — no other thread can touch it</td>
+                        <td><strong>Not safe by default — requires synchronization</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+<pre><code>class Task implements Runnable {
+    @Override
+    public void run() {
+        int number = 0;           // LOCAL VARIABLE → lives on THIS thread's stack
+        String name = "Alice";    // LOCAL VARIABLE → lives on THIS thread's stack
+        // These are 100% thread-safe. No other thread can see them.
+    }
+}
+
+class DataPoint {
+    private int value = 10;  // INSTANCE FIELD → lives on the heap
+    // If two threads hold a reference to the same DataPoint object,
+    // both can read and write 'value' — race condition without synchronization
+}</code></pre>
+            <p><strong>The core rule:</strong> Local variables inside <code>run()</code> are on the thread's private stack — completely safe, no synchronization needed. Fields on heap objects shared between threads — always need protection.</p>
+
+            <h3>The Race Condition — Why <code>counter++</code> Is Not Atomic</h3>
+            <p>A race condition occurs when the correctness of a program depends on the relative timing of multiple threads accessing shared data. The classic example:</p>
+
+<pre><code>private static int counter = 0;   // on the heap — shared between threads
+
+public static void increment() {
+    counter++;   // LOOKS like one operation. It is actually THREE:
+    // 1. READ:  load the current value of counter from heap into a CPU register
+    // 2. ADD:   increment the register value by 1
+    // 3. WRITE: store the new value back to the heap
+}</code></pre>
+            
+            <p><strong>The race:</strong> Two threads can both execute step 1 before either executes step 3:</p>
+
+<pre><code>Thread 1: READ counter = 0
+Thread 2: READ counter = 0    ← reads BEFORE Thread 1 writes back
+Thread 1: ADD → 1
+Thread 2: ADD → 1
+Thread 1: WRITE counter = 1
+Thread 2: WRITE counter = 1   ← overwrites Thread 1's write!
+
+Result: counter = 1  (expected: 2) — one increment was lost</code></pre>
+            <p>This is called a <strong>lost update</strong> and is the most common concurrency bug. Running 2 threads each calling <code>increment()</code> 1000 times produces a result <em>less than 2000</em> — and the value differs every run because it depends on OS scheduling.</p>
+
+            <h3>The <code>synchronized</code> Keyword — Method-Level</h3>
+
+<pre><code>private static int counter = 0;
+
+// Synchronized method: only one thread can execute this at a time
+public static synchronized void increment() {
+    counter++;   // now atomic from the caller's perspective
+}</code></pre>
+
+            <p>When a thread enters a <code>synchronized</code> method:</p>
+            <ul>
+                <li>It acquires the <strong>intrinsic lock</strong> of the object (or the <code>Class</code> object for static methods)</li>
+                <li>All other threads trying to enter <em>any</em> synchronized method on the <em>same object</em> must wait in <code>BLOCKED</code> state</li>
+                <li>When the thread exits the method (normally or via exception), the lock is automatically released</li>
+                <li>The JVM picks one waiting thread to acquire the lock next (non-deterministic — no fairness guarantee)</li>
+            </ul>
+            <p><strong>Demo: race condition fixed vs unfixed:</strong></p>
+
+<pre><code>// WITHOUT synchronized: result varies, always &lt; 2000
+// WITH synchronized: result is always exactly 2000
+Thread t1 = new Thread(() -&gt; {
+    for (int i = 0; i &lt; 1000; i++) increment();
+});
+Thread t2 = new Thread(() -&gt; {
+    for (int i = 0; i &lt; 1000; i++) increment();
+});
+t1.start(); t2.start();
+t1.join();  t2.join();
+System.out.println("Counter: " + counter);  // always 2000 with synchronized</code></pre>
+
+            <h3>The Single-Lock Problem — When <code>synchronized</code> Methods Hurt Throughput</h3>
+            <p>Every Java object has <strong>exactly one intrinsic lock</strong>. Synchronizing multiple methods on the same object means they all compete for that single lock — even if they are logically independent.</p>
+
+<pre><code>class SharedResource {
+    private int counter1 = 0;
+    private int counter2 = 0;
+
+    public synchronized void incrementOne() { counter1++; }  // ← lock on 'this'
+    public synchronized void incrementTwo() { counter2++; }  // ← SAME lock on 'this'
+}</code></pre>
+            
+            <p>If Thread 1 calls <code>incrementOne()</code> and holds the lock, Thread 2 trying to call <code>incrementTwo()</code> must wait — even though <code>counter1</code> and <code>counter2</code> are completely independent variables. This serializes two operations that could safely run in parallel, cutting throughput in half for no reason.</p>
+            <p><strong>Illustration:</strong></p>
+
+<pre><code>Thread 1: [holds lock → incrementOne()] ────────────────────►
+Thread 2: [blocked, waiting...         ] [lock free → incrementTwo()]►
+
+Instead of:
+Thread 1: [incrementOne()] ─────────────────────────────────►
+Thread 2: [incrementTwo()] ─────────────────────────────────►
+            ↑ both running in parallel — twice the throughput</code></pre>
+
+            <h3>Synchronized Blocks — Fine-Grained Control</h3>
+            <p><code>synchronized</code> blocks let you:</p>
+            <ol>
+                <li>Lock only the specific lines that <em>need</em> protection (not the entire method)</li>
+                <li>Choose <em>which object</em> to lock on — enabling multiple independent locks</li>
+            </ol>
+
+<pre><code>class SharedResource {
+    private int counter1 = 0;
+    private int counter2 = 0;
+
+    // Two independent locks — one per counter
+    private final Object lock1 = new Object();
+    private final Object lock2 = new Object();
+
+    public void incrementOne() {
+        // Code before the block: no lock held, any thread can execute
+        doSomeNonCriticalPreWork();
+
+        synchronized (lock1) {          // ← acquires lock1 only
+            counter1++;                 // protected by lock1
+        }                               // ← lock1 released here
+
+        doSomeNonCriticalPostWork();
+        // Code after block: lock1 already released
+    }
+
+    public void incrementTwo() {
+        synchronized (lock2) {          // ← acquires lock2 — INDEPENDENT of lock1
+            counter2++;
+        }
+    }
+}</code></pre>
+            
+            <p>Now Thread 1 executing <code>incrementOne()</code> and Thread 2 executing <code>incrementTwo()</code> run <strong>truly in parallel</strong> — they lock on different objects so neither blocks the other.</p>
+            <div class="highlight-box">
+                <p><strong>The golden rule:</strong> Only put the minimum necessary code inside a synchronized block. Every extra line inside the block is a line that serializes threads unnecessarily.</p>
+            </div>
+
+            <h3>Object-Level Locking vs. Class-Level Locking</h3>
+            <p><strong>Object-level locking</strong> — <code>synchronized(this)</code> or <code>synchronized</code> instance method:</p>
+            <ul>
+                <li>Acquires the intrinsic lock of the <strong>specific object instance</strong></li>
+                <li>Two different instances of the same class have different locks — they don't block each other</li>
+            </ul>
+
+<pre><code>class Counter {
+    private int count = 0;
+
+    public synchronized void increment() { count++; }
+    // equivalent to:
+    public void increment() {
+        synchronized (this) { count++; }   // 'this' = this Counter instance
+    }
+}
+
+Counter c1 = new Counter();
+Counter c2 = new Counter();
+// c1.increment() and c2.increment() can run in parallel — different locks</code></pre>
+
+            <p><strong>Class-level locking</strong> — <code>synchronized(ClassName.class)</code> or <code>synchronized</code> static method:</p>
+            <ul>
+                <li>Acquires the lock of the <strong><code>Class</code> object</strong> (one per class, shared by all instances)</li>
+                <li>All instances of the class share this single lock — they block each other</li>
+            </ul>
+
+<pre><code>class Counter {
+    private static int globalCount = 0;
+
+    public static synchronized void increment() { globalCount++; }
+    // equivalent to:
+    public static void increment() {
+        synchronized (Counter.class) { globalCount++; }   // single lock for all instances
+    }
+}
+
+Counter c1 = new Counter();
+Counter c2 = new Counter();
+// c1.increment() and c2.increment() CANNOT run in parallel — same class-level lock</code></pre>
+
+            <p><strong>Demonstration of the difference:</strong></p>
+
+<pre><code>class ObjectLocking {
+    public synchronized void instanceMethod() {
+        System.out.println(Thread.currentThread().getName() + " entered");
+        Thread.sleep(2000);
+        System.out.println(Thread.currentThread().getName() + " exited");
+    }
+}
+
+// With object-level locking:
+ObjectLocking obj1 = new ObjectLocking();
+ObjectLocking obj2 = new ObjectLocking();
+new Thread(obj1::instanceMethod, "T1").start();  // locks obj1's monitor
+new Thread(obj2::instanceMethod, "T2").start();  // locks obj2's monitor — different!
+// T1 and T2 run in parallel — output: both "entered" before either "exited"
+
+// If instanceMethod were STATIC (class-level locking):
+// T1 and T2 would serialize — T2 waits 2 seconds for T1 to finish</code></pre>
+            <p><strong>Guidance:</strong> Avoid class-level locking unless you genuinely need to protect static shared state that must be serialized across <em>all</em> instances. Class-level locks are the widest possible lock scope and kill concurrency across the entire class.</p>
+
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation</h2>
+            
+            <h3>Complete Example: The Full Progression from Bug to Correct</h3>
+
+<pre><code>package com.example.sync;
+
+public class SynchronizationProgression {
+
+    // ── Stage 1: THE BUG ───────────────────────────────────────────────────
+    static class UnsafeCounter {
+        private int count = 0;
+        public void increment() { count++; }   // NOT atomic — race condition
+        public int getCount() { return count; }
+    }
+
+    // ── Stage 2: OVER-SYNCHRONIZED (correct but slow) ─────────────────────
+    static class OverSynchronizedResource {
+        private int counter1 = 0;
+        private int counter2 = 0;
+
+        // Both methods share the same intrinsic lock — serializes independent work
+        public synchronized void incrementOne() { counter1++; }
+        public synchronized void incrementTwo() { counter2++; }
+    }
+
+    // ── Stage 3: FINE-GRAINED (correct AND fast) ──────────────────────────
+    static class WellSynchronizedResource {
+        private int counter1 = 0;
+        private int counter2 = 0;
+
+        private final Object lock1 = new Object();   // dedicated lock per resource
+        private final Object lock2 = new Object();
+
+        public void incrementOne() {
+            synchronized (lock1) { counter1++; }     // only blocks incrementOne callers
+        }
+        public void incrementTwo() {
+            synchronized (lock2) { counter2++; }     // completely independent of lock1
+        }
+        public int getCounter1() { return counter1; }
+        public int getCounter2() { return counter2; }
+    }
+
+    // ── Demonstration ─────────────────────────────────────────────────────
+    public static void main(String[] args) throws InterruptedException {
+        WellSynchronizedResource resource = new WellSynchronizedResource();
+
+        // Thread 1 increments counter1, Thread 2 increments counter2 — no contention
+        Thread t1 = new Thread(() -&gt; {
+            for (int i = 0; i &lt; 10_000; i++) resource.incrementOne();
+        }, "counter1-worker");
+
+        Thread t2 = new Thread(() -&gt; {
+            for (int i = 0; i &lt; 10_000; i++) resource.incrementTwo();
+        }, "counter2-worker");
+
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+
+        // Both must be exactly 10000 — fine-grained locking gives correctness + parallelism
+        System.out.println("Counter1: " + resource.getCounter1());  // 10000
+        System.out.println("Counter2: " + resource.getCounter2());  // 10000
+    }
+}</code></pre>
+
+            <h3>Real-World Use Case: Bank Account with Synchronized Block</h3>
+            <p>A <code>BankAccount</code> where <code>deposit</code> and <code>withdraw</code> must be atomic, but <code>getBalance</code> read-only calls shouldn't unnecessarily block each other (note: reads still need synchronization for visibility — demonstrated here with the same lock for simplicity):</p>
+
+<pre><code>public class BankAccount {
+    private double balance;
+    private final Object balanceLock = new Object();   // dedicated lock
+    private final String accountId;
+
+    public BankAccount(String accountId, double initialBalance) {
+        this.accountId = accountId;
+        this.balance = initialBalance;
+    }
+
+    public void deposit(double amount) {
+        if (amount &lt;= 0) throw new IllegalArgumentException("Amount must be positive");
+        synchronized (balanceLock) {
+            // Critical section: only the balance update needs protection
+            // Input validation above can run without the lock
+            balance += amount;
+            System.out.printf("[%s] Deposited %.2f. New balance: %.2f%n",
+                Thread.currentThread().getName(), amount, balance);
+        }
+    }
+
+    public boolean withdraw(double amount) {
+        if (amount &lt;= 0) throw new IllegalArgumentException("Amount must be positive");
+        synchronized (balanceLock) {
+            if (balance &lt; amount) {
+                System.out.printf("[%s] Insufficient funds. Balance: %.2f%n",
+                    Thread.currentThread().getName(), balance);
+                return false;
+            }
+            balance -= amount;
+            System.out.printf("[%s] Withdrew %.2f. New balance: %.2f%n",
+                Thread.currentThread().getName(), amount, balance);
+            return true;
+        }
+    }
+
+    public double getBalance() {
+        synchronized (balanceLock) { return balance; }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        BankAccount account = new BankAccount("ACC-001", 1000.0);
+
+        // Simulate concurrent deposits and withdrawals
+        Thread[] threads = new Thread[10];
+        for (int i = 0; i &lt; 5; i++) {
+            threads[i] = new Thread(() -&gt; account.deposit(100.0), "depositor-" + i);
+            threads[i + 5] = new Thread(() -&gt; account.withdraw(80.0), "withdrawer-" + i);
+        }
+        for (Thread t : threads) t.start();
+        for (Thread t : threads) t.join();
+
+        System.out.printf("Final balance: %.2f%n", account.getBalance());
+        // Without synchronization: balance is unpredictable and almost certainly wrong
+        // With synchronization: balance is always exactly 1000 + (5×100) - (5×80) = 1100
+    }
+}</code></pre>
+
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture & Performance</h2>
+
+            <h3>The <code>monitorenter</code>/<code>monitorexit</code> Bytecode Layer</h3>
+            <p>The <code>synchronized</code> keyword compiles to two bytecode instructions:</p>
+            <ul>
+                <li><code>monitorenter</code>: acquire the monitor of the object on the operand stack</li>
+                <li><code>monitorexit</code>: release the monitor — appears twice in compiled code (once for normal exit, once for exception path) to guarantee release even if an exception is thrown</li>
+            </ul>
+            <p>This is why <code>synchronized</code> methods automatically release the lock on exception — the compiler generates the <code>monitorexit</code> in a synthetic <code>finally</code> block. You get this guarantee for free, which <code>ReentrantLock</code> does not give you automatically (you must use <code>try/finally</code> explicitly — covered in the next set of notes).</p>
+
+            <h3>Performance Impact of Synchronization</h3>
+            <p><strong>Uncontended lock:</strong> Modern JVMs use "biased locking" and "lightweight locking" optimizations. An uncontended <code>synchronized</code> block on a modern HotSpot JVM costs ~2–5 nanoseconds — essentially negligible. The JIT compiler can even eliminate it entirely (lock elision) if it proves no other thread can reach the object.</p>
+            <p><strong>Contended lock:</strong> When threads genuinely compete, the cost rises dramatically. The blocked thread enters <code>BLOCKED</code> state (OS thread parks), which involves a system call. When the lock is released, the OS must wake the waiting thread — another system call. This round trip is typically 1–10 microseconds, making contended synchronization ~1000x more expensive than uncontended.</p>
+            <p><strong>The performance lesson:</strong> The cost of <code>synchronized</code> is not in acquiring an uncontended lock — it's in <em>contention</em>. Minimize contention by: (1) making critical sections as small as possible, (2) using fine-grained locks to reduce the scope of what's protected, (3) ensuring threads spend as little time inside synchronized blocks as possible.</p>
+
+            <h3>Tradeoff Matrix: Synchronization Granularity</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Approach</th>
+                        <th>Correctness</th>
+                        <th>Throughput</th>
+                        <th>Complexity</th>
+                        <th>Risk</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>No synchronization</td>
+                        <td>❌ Race conditions</td>
+                        <td>High</td>
+                        <td>Low</td>
+                        <td>Data corruption</td>
+                    </tr>
+                    <tr>
+                        <td><code>synchronized</code> whole method</td>
+                        <td>✅ Correct</td>
+                        <td>Low (over-serialized)</td>
+                        <td>Low</td>
+                        <td>Performance bottleneck</td>
+                    </tr>
+                    <tr>
+                        <td><code>synchronized(this)</code> block</td>
+                        <td>✅ Correct</td>
+                        <td>Medium (still one lock)</td>
+                        <td>Medium</td>
+                        <td>Still serializes independent ops</td>
+                    </tr>
+                    <tr>
+                        <td><code>synchronized</code> on custom objects</td>
+                        <td>✅ Correct</td>
+                        <td>High (parallel independent ops)</td>
+                        <td>Medium</td>
+                        <td>Must <code>final</code> the lock objects</td>
+                    </tr>
+                    <tr>
+                        <td>Class-level lock (<code>ClassName.class</code>)</td>
+                        <td>✅ Correct</td>
+                        <td>Very low (global serialization)</td>
+                        <td>Low</td>
+                        <td>Kills all concurrency for the class</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Common Pitfalls at This Stage</h3>
+
+            <p><strong>1. Locking on a mutable or non-final object</strong></p>
+<pre><code>// DANGEROUS: if lockObj is ever reassigned, the lock changes
+private Object lockObj = new Object();
+lockObj = new Object();  // now threads that checked the old object proceed simultaneously
+
+// CORRECT: final ensures the lock reference never changes
+private final Object lockObj = new Object();</code></pre>
+            <p>Always declare custom lock objects <code>final</code>. The lock object itself is never modified — only the data it protects changes.</p>
+
+            <p><strong>2. Synchronizing on a String literal or Integer</strong></p>
+<pre><code>// VERY DANGEROUS: String literals are interned — shared across the entire JVM
+private final String lock = "MY_LOCK";
+synchronized (lock) { ... }  // could inadvertently share the lock with unrelated code
+                               // using the same string literal anywhere in the JVM
+
+// CORRECT: always use a dedicated new Object()
+private final Object lock = new Object();</code></pre>
+
+            <p><strong>3. Making Lock Objects Public (Lock Escape)</strong></p>
+<pre><code>// DANGEROUS: if the lock object is accessible externally, other code can synchronize
+// on it too — creating hidden ordering dependencies and potential deadlocks
+public final Object lock = new Object();  // ← exposed, can be used externally
+
+// CORRECT: always private
+private final Object lock = new Object();</code></pre>
+
+            <p><strong>4. Holding Locks During I/O or Other Long Operations</strong></p>
+<pre><code>// BAD: lock held for entire duration including slow I/O
+public synchronized void processAndSave(Data d) {
+    process(d);             // fast — fine inside lock
+    saveToDatabase(d);      // SLOW — holds lock during entire DB call
+    // Other threads blocked for hundreds of milliseconds
+}
+
+// BETTER: do I/O outside the lock, only lock the in-memory state change
+public void processAndSave(Data d) {
+    process(d);
+    byte[] serialized = serialize(d);  // prepare data outside lock
+    synchronized (lock) {
+        inMemoryCache.put(d.id(), d);  // only the fast memory write is locked
+    }
+    saveToDatabase(serialized);        // slow I/O outside the lock
+}</code></pre>
+
+            <p><strong>5. Forgetting That <code>synchronized</code> on Different Objects Provides No Mutual Exclusion</strong></p>
+<pre><code>// Thread 1 synchronizes on lock1, Thread 2 synchronizes on lock2
+// These do NOT exclude each other — they're completely independent
+synchronized (lock1) { counter++; }   // Thread 1
+synchronized (lock2) { counter++; }   // Thread 2 — runs at same time, race condition!
+
+// For mutual exclusion, both threads MUST synchronize on the SAME object
+synchronized (sharedLock) { counter++; }   // Thread 1
+synchronized (sharedLock) { counter++; }   // Thread 2 — correctly serialized</code></pre>
+
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: What is a race condition and how does <code>synchronized</code> prevent it?</strong></p>
+            <p>A race condition occurs when multiple threads access shared mutable data concurrently and the final result depends on the order of thread execution — which is non-deterministic. The classic example is <code>counter++</code>, which compiles to three non-atomic operations (read, increment, write). Two threads can both read the same value before either writes back, causing one increment to be lost. <code>synchronized</code> prevents this by ensuring only one thread at a time can execute the protected code block. Under the hood, it uses <code>monitorenter</code>/<code>monitorexit</code> bytecode instructions on the object's intrinsic monitor. The thread that acquires the monitor completes all three sub-operations atomically from other threads' perspectives — no other thread can enter a synchronized block on the same object until the monitor is released.</p>
+
+            <p><strong>Q2: What is the difference between synchronizing a method and using a synchronized block?</strong></p>
+            <p>Synchronizing a method (<code>public synchronized void foo()</code>) acquires the object's intrinsic lock for the <em>entire duration</em> of the method, protecting every line inside it. A synchronized block (<code>synchronized(obj) { ... }</code>) lets you specify exactly which lines need protection and — critically — which object to lock on. The block form gives two advantages: (1) you reduce the critical section to the minimum necessary, allowing more code to run without holding the lock, and (2) you can lock on different objects for different operations, enabling logically independent operations to run in parallel. The rule of thumb in production code: always prefer synchronized blocks over synchronized methods; only expose synchronized methods in the simplest cases where the entire method body genuinely needs serialization.</p>
+
+            <p><strong>Q3: What is the intrinsic lock (monitor) and where does it come from?</strong></p>
+            <p>Every Java object — literally every one, from <code>new Object()</code> to a complex domain class — has an intrinsic lock (also called a monitor) stored in the object's header in heap memory. This is not something you create; it's provided by the JVM for every object. When a thread executes <code>synchronized(obj)</code>, the JVM executes a <code>monitorenter</code> bytecode instruction on that object, which atomically checks if the monitor is free and, if so, sets the thread as the owner. On exit, <code>monitorexit</code> decrements the ownership count and, if it reaches zero, releases the monitor, allowing a waiting thread to acquire it. The <code>Class</code> object itself also has a monitor, which is what static synchronized methods use.</p>
+
+            <hr style="border:0; border-top: 1px solid var(--border-color); margin: 2rem 0;">
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: You have two <code>synchronized</code> methods on the same class — <code>incrementA()</code> and <code>incrementB()</code> — operating on two completely independent counters. A code review flags this as a performance problem. Explain exactly why and propose a fix.</strong></p>
+            <p>The problem is that both methods synchronize on <code>this</code> (the object's single intrinsic lock). Even though <code>counterA</code> and <code>counterB</code> are completely independent state, Thread 1 holding the lock in <code>incrementA()</code> prevents Thread 2 from entering <code>incrementB()</code>, even though those operations have zero logical dependency. In a high-throughput scenario, this halves the effective throughput — both operations are serialized into a single-threaded queue. Fix: replace method-level synchronization with synchronized blocks on dedicated lock objects, one per counter:</p>
+<pre><code>private final Object lockA = new Object();
+private final Object lockB = new Object();
+
+public void incrementA() { synchronized(lockA) { counterA++; } }
+public void incrementB() { synchronized(lockB) { counterB++; } }</code></pre>
+            <p>Now the two operations are protected by independent monitors — Thread 1 in <code>incrementA()</code> and Thread 2 in <code>incrementB()</code> run truly in parallel.</p>
+
+            <p><strong>Q5: What is the difference between object-level locking and class-level locking? When is each appropriate?</strong></p>
+            <p>Object-level locking (<code>synchronized(this)</code> or <code>synchronized</code> instance methods) acquires the monitor of the specific object instance. Two different instances of the same class have separate monitors — their synchronized methods can run in parallel. This is appropriate when protecting per-instance state (fields that belong to a specific object). Class-level locking (<code>synchronized(ClassName.class)</code> or <code>static synchronized</code> methods) acquires the monitor of the <code>Class</code> object itself, which is shared by all instances. This is appropriate for protecting static shared state that must be consistent across all instances (global counters, class-wide caches). The performance danger: class-level locking serializes <em>all</em> instances — if 100 objects exist, any synchronized static call from any of them blocks all others. Avoid it unless you genuinely need cross-instance serialization.</p>
+
+            <p><strong>Q6: A colleague argues that adding <code>synchronized</code> to every method in a class will make it thread-safe. Is this correct? What subtle problem remains?</strong></p>
+            <p>Incorrect — or at least, incomplete. Making individual methods <code>synchronized</code> gives you <strong>method-level atomicity</strong>: each individual method call is atomic. But if your class has compound operations — calling two methods in sequence where the result of the first affects the second — thread safety breaks at the compound level. Classic example:</p>
+<pre><code>// Both methods are synchronized individually
+if (map.containsKey(key)) {      // synchronized check
+    return map.get(key);         // synchronized read
+    // BUG: another thread can REMOVE the key between these two calls
+}</code></pre>
+            <p>Each individual call is safe; the <em>compound check-then-act</em> is not. This is called a <strong>check-then-act race condition</strong>. The fix is to synchronize the compound operation as a unit. Additionally, synchronizing every method is often severe over-synchronization — it serializes all access to the object and destroys throughput. Thread safety must be designed at the <em>operation</em> level, not just the <em>method</em> level.</p>
+
+            <hr style="border:0; border-top: 1px solid var(--border-color); margin: 2rem 0;">
+
+            <h3>Advanced</h3>
+            <p><strong>Q7: Explain the JMM visibility guarantee provided by <code>synchronized</code> and why it matters beyond mutual exclusion.</strong></p>
+            <p><code>synchronized</code> provides two distinct guarantees, and the second is often overlooked. The first is <strong>mutual exclusion</strong> — only one thread can be inside a synchronized block on a given monitor at a time. The second is <strong>memory visibility</strong>: the JMM specifies that when a thread releases a monitor (exits a synchronized block), all writes it performed are flushed to main memory. When another thread acquires the same monitor (enters the corresponding synchronized block), it reads the latest values from main memory — it sees all writes that happened before the previous thread released the lock. This establishes a happens-before relationship: everything done inside a synchronized block by Thread A happens-before everything done inside a synchronized block on the same monitor by Thread B (if Thread B acquires it after Thread A releases). Without <code>synchronized</code>, a thread's writes to a shared variable might sit in a CPU register or L1 cache and never be visible to other threads — this is not a hardware bug, it's permitted JVM behavior for unsynchronized code. This is why you cannot fix a visibility problem by relying on <code>synchronized</code> on only <em>one</em> of the two threads — both the writer and the reader must synchronize on the same monitor.</p>
+
+            <p><strong>Q8: Two threads are deadlocked. Thread 1 holds <code>lockA</code> and is waiting for <code>lockB</code>. Thread 2 holds <code>lockB</code> and is waiting for <code>lockA</code>. How would you detect this in production and what structural changes prevent it?</strong></p>
+            <p>Detection: take a thread dump (<code>jstack &lt;pid&gt;</code> or <code>kill -3 &lt;pid&gt;</code>). The JVM's deadlock detector identifies cycles — you'll see output like <code>"Thread-1" waiting to lock &lt;0xABCD&gt; (a java.lang.Object) which is held by "Thread-2"</code> and <code>"Thread-2" waiting to lock &lt;0xEFGH&gt; (a java.lang.Object) which is held by "Thread-1"</code>. The JVM explicitly prints "Java-level deadlock:" with the full cycle. Structural prevention: (1) <strong>Lock ordering</strong> — always acquire multiple locks in a globally consistent order. If all code acquires <code>lockA</code> before <code>lockB</code>, the cycle is impossible. (2) <strong>Lock timeout</strong> — use <code>ReentrantLock.tryLock(timeout)</code> instead of <code>synchronized</code>; if a lock cannot be acquired within the timeout, release all held locks and retry. <code>synchronized</code> has no timeout — it waits forever, making deadlock permanent. (3) <strong>Reduce scope</strong> — eliminate the need to hold multiple locks simultaneously by restructuring the data model. (4) <strong>Single lock</strong> — if two resources are always accessed together, protect them with a single shared lock instead of two separate ones. Note: this is a preview of the next section — <code>ReentrantLock</code>'s <code>tryLock()</code> is the production-grade solution to this specific problem.</p>
+
+            <p><strong>Q9: A high-throughput service uses a <code>synchronized</code> method that takes 100ms on average (it calls a database). You're seeing 99th-percentile latency of 800ms under load. Walk through your analysis.</strong></p>
+            <p>100ms average in a synchronized method means every thread must wait for the previous to finish DB call. With 8 threads all calling this method, average queue depth at any moment: (arrival rate × service time). At throughput approaching <code>1/0.1s = 10 req/s per thread</code>, queue begins building. 800ms p99 means some threads wait 7 additional DB call durations — about 7 threads deep in the wait queue. Root cause: holding the lock during I/O is the cardinal sin of synchronization. The lock is held during the full 100ms DB call when it only needs to be held for in-memory state updates (microseconds). Fix: (1) Extract the I/O out of the synchronized block — prepare the query, build the request outside the lock, execute the DB call outside the lock, then re-acquire the lock only to update the in-memory state with the result. (2) If the purpose of the lock is to deduplicate concurrent requests for the same resource (dog-piling), use a <code>ConcurrentHashMap.computeIfAbsent()</code> pattern to coalesce concurrent requests — this completely eliminates the synchronized method. (3) Measure: add metrics on lock contention time (time spent in <code>BLOCKED</code> state per thread) using JMX <code>ThreadMXBean</code> to confirm the diagnosis before rewriting.</p>
+
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <p>After internalizing these notes, you should be able to:</p>
+            <ul>
+                <li><strong>Explain</strong> the difference between stack memory and heap memory at the thread level, state what lives in each, and articulate why shared heap state requires synchronization while stack state never does</li>
+                <li><strong>Demonstrate</strong> the race condition on <code>counter++</code> by writing out the three-step (read-increment-write) non-atomic sequence and showing how two threads can interleave to produce a lost update</li>
+                <li><strong>Apply</strong> the <code>synchronized</code> keyword correctly to both methods and blocks, and explain the <code>monitorenter</code>/<code>monitorexit</code> bytecode instructions it generates</li>
+                <li><strong>Identify</strong> the single-lock bottleneck — when multiple <code>synchronized</code> methods on the same object serialize logically independent operations — and refactor to synchronized blocks on separate lock objects</li>
+                <li><strong>Distinguish</strong> object-level locking (<code>this</code>) from class-level locking (<code>ClassName.class</code>), state what each serializes, and identify when class-level locking is inappropriately broad</li>
+                <li><strong>Explain</strong> the two JMM guarantees of <code>synchronized</code>: mutual exclusion AND memory visibility (happens-before on lock release/acquire)</li>
+                <li><strong>Apply</strong> the three rules for correct custom lock objects: always <code>private</code>, always <code>final</code>, always <code>new Object()</code> (never String literals or primitive wrappers)</li>
+                <li><strong>Identify</strong> the compound-operation race condition (check-then-act) that persists even when individual methods are synchronized, and redesign the operation to be a single atomic unit</li>
+                <li><strong>Diagnose</strong> excessive lock contention from a symptom (high p99 latency) and identify holding a lock during I/O as the root cause, with a structural fix</li>
+                <li><strong>State</strong> the deadlock precondition (circular lock dependency) and apply lock ordering as the primary structural prevention</li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
