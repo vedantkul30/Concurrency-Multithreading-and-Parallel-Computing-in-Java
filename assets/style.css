@@ -20,44 +20,34 @@ h1 {
 }
 
 h2 {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    color: #222;
 }
 
-details {
+.subtopics {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.subtopics li {
     margin: 12px 0;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #fafafa;
-}
-
-summary {
     padding: 12px 15px;
-    font-weight: bold;
-    cursor: pointer;
     background: #f1f3f5;
-    transition: background 0.2s ease;
+    border-radius: 8px;
+    transition: transform 0.2s ease, background 0.2s ease;
 }
 
-summary:hover {
+.subtopics li:hover {
     background: #e9ecef;
-}
-
-details ul {
-    padding: 10px 30px 15px;
-    margin: 0;
+    transform: translateX(5px);
 }
 
 a {
     text-decoration: none;
     color: #0077cc;
-    transition: color 0.2s ease;
+    font-weight: 500;
 }
 
 a:hover {
     color: #005999;
-}
-
-li {
-    margin: 10px 0;
 }
