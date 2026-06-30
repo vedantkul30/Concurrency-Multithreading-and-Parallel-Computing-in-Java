@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: Mutexes & Semaphores</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Title & Syllabus</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Definitions</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Multithreading: Mutexes & Semaphores</h1>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: -10px; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                <p><strong>Syllabus Coverage: Lectures 40–43</strong> (What are Semaphores? · Mutexes and Semaphores · Semaphores Example · Mutex and Binary Semaphore)</p>
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            
+            <div class="highlight-box">
+                <p><strong>One-Sentence Definition:</strong><br>
+                A mutex is a synchronization construct that grants exclusive, ownership-bound access to a single critical section (which is exactly what <code>synchronized</code> and <code>ReentrantLock</code> already provide), while a semaphore generalizes this idea using a counter to allow a configurable number of threads to access a resource pool simultaneously, with no concept of ownership.</p>
+            </div>
+
+            <h3>The Architecture Analogy</h3>
+            <p>Picture a <strong>building with restricted-access rooms</strong>.</p>
+            <p>A <strong>mutex</strong> is a single-occupancy meeting room with one key. Only one person can be inside at a time, and critically — the room's policy states that <strong>only the person who took the key may return it</strong>. If someone else tries to return the key on your behalf, the building manager rejects it: an error. This ownership rule is the defining feature of a mutex.</p>
+            <p>A <strong>binary semaphore</strong> is the same single-occupancy room, but with no name attached to the key. Whoever picks it up can use the room, and — crucially — <strong>anyone</strong> can return the key to the box, not necessarily the person who took it. The room still only fits one person at a time (binary: 0 or 1 available), but there's no ownership enforcement.</p>
+            <p>A <strong>counting semaphore</strong> is a parking garage with, say, three available spots and a sign at the entrance showing the live count. Three cars can park simultaneously. The fourth car waits at the barrier until a spot opens. Critically — the garage attendant doesn't care which specific car uses which specific spot, or even which car leaves first — it only tracks <strong>how many</strong> spots are occupied, not <strong>who</strong> occupies them.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <p><strong>Dijkstra's semaphore (1965)</strong> predates Java by decades — it's an operating-systems-level concept that Java's <code>java.util.concurrent.Semaphore</code> class implements faithfully. Internally, <code>Semaphore</code> is built on AQS (<code>AbstractQueuedSynchronizer</code>) — the same foundation as <code>ReentrantLock</code> — but instead of a binary <code>state</code> (0 = unlocked, 1 = locked), it uses <code>state</code> as a <strong>non-negative integer permit count</strong>. <code>acquire()</code> atomically decrements the count via CAS (retrying if contended); if the count would go negative, the calling thread is parked in the AQS wait queue. <code>release()</code> atomically increments the count and, if threads are waiting, unparks one of them.</p>
+            <p><strong>The crucial JVM-level distinction from <code>ReentrantLock</code>:</strong> AQS tracks an "exclusive owner thread" for <code>ReentrantLock</code> (used for re-entrancy counting and for throwing <code>IllegalMonitorStateException</code> if a non-owner calls <code>unlock()</code>). <code>Semaphore</code> does <strong>not</strong> track an owner thread at all — <code>acquire()</code> and <code>release()</code> can be called from completely different threads with no error, no ownership check. This is not a missing feature; it is the fundamental design distinction between the two constructs, faithfully reproduced from Dijkstra's original specification.</p>
+
+
+            <h2 id="course-content">2. Course Content: Key Concepts & Definitions</h2>
+            
+            <h3>Why Semaphores Exist — Historical Context</h3>
+            <p>Edsger Dijkstra introduced semaphores in 1965 as part of his foundational work on synchronization in concurrent systems (the same Dijkstra known for the shortest-path algorithm). Before semaphores, there was no clean, formal, language-agnostic way to safely manage shared resources and critical sections among concurrent processes. The semaphore concept became — and remains — a fundamental building block underlying synchronization primitives in virtually every operating system and concurrent programming language, including Java's own <code>synchronized</code> and <code>Lock</code> implementations conceptually descend from this lineage.</p>
+            <p>A semaphore is fundamentally a counter with two atomic operations:</p>
+            <ul>
+                <li><strong><code>acquire()</code></strong> (historically "P", from Dutch <em>proberen</em>, "to test"): decrements the count; if the count would go below zero, the calling thread blocks until a permit becomes available</li>
+                <li><strong><code>release()</code></strong> (historically "V", from Dutch <em>verhogen</em>, "to increment"): increments the count, potentially waking a blocked thread</li>
+            </ul>
+
+            <hr>
+
+            <h3>Binary Semaphore vs. Counting Semaphore</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Binary Semaphore</th>
+                        <th>Counting Semaphore</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Permit range</strong></td>
+                        <td>0 or 1 only</td>
+                        <td>Any non-negative integer</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Use case</strong></td>
+                        <td>Enforce mutual exclusion (only one thread in the critical section)</td>
+                        <td>Limit concurrent access to N identical resources</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Behaves like</strong></td>
+                        <td>A lock</td>
+                        <td>A resource pool with a fixed capacity</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Example</strong></td>
+                        <td>Protecting a single shared counter</td>
+                        <td>Limiting concurrent database connections to 10</td>
+                    </tr>
+                </tbody>
+            </table>
+
+<pre><code>// Binary semaphore — acts like a lock (mutual exclusion)
+Semaphore binarySem = new Semaphore(1);   // exactly one permit
+
+// Counting semaphore — limits concurrent access to a pool of resources
+Semaphore connectionPool = new Semaphore(10);   // ten permits — e.g., 10 DB connections</code></pre>
+
+            <p><strong>Critical conceptual point from the course material:</strong> semaphores only track <em>how many</em> permits are available — they do not track <em>which specific resources</em> are free or in use. If you have a counting semaphore with 10 permits representing 10 database connections, the semaphore itself doesn't know or care which specific connection object a thread is using — that bookkeeping (matching threads to actual connection instances) is the application's responsibility, typically paired with a separate pool data structure (e.g., a <code>BlockingQueue&lt;Connection&gt;</code>).</p>
+
+            <hr>
+
+            <h3>Java's <code>Semaphore</code> Class</h3>
+
+<pre><code>import java.util.concurrent.Semaphore;
+
+// Constructor: number of permits, and optional fairness flag
+Semaphore semaphore = new Semaphore(3, true);
+// 3 permits available; fair = true means longest-waiting thread gets the next permit</code></pre>
+
+            <p><strong>Core methods:</strong></p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>acquire()</code></td>
+                        <td>Blocks until a permit is available, then takes it (decrements count). Throws <code>InterruptedException</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>release()</code></td>
+                        <td>Returns a permit (increments count), potentially unblocking a waiting thread</td>
+                    </tr>
+                    <tr>
+                        <td><code>tryAcquire()</code></td>
+                        <td>Non-blocking attempt; returns <code>true</code>/<code>false</code> immediately</td>
+                    </tr>
+                    <tr>
+                        <td><code>tryAcquire(timeout, unit)</code></td>
+                        <td>Blocks up to the timeout, then gives up if no permit becomes available</td>
+                    </tr>
+                    <tr>
+                        <td><code>availablePermits()</code></td>
+                        <td>Returns the current count of available permits</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>Fairness, exactly as with <code>ReentrantLock</code>:</strong> <code>new Semaphore(n, true)</code> guarantees FIFO ordering — the longest-waiting thread acquires the next available permit, preventing starvation. The default (<code>false</code>) allows "barging" — a newly arriving thread can acquire a permit that just became available even if other threads have been waiting longer.</p>
+
+            <hr>
+
+            <h3>Complete Worked Example: Limiting Concurrent Downloads</h3>
+
+<pre><code>import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+
+public class Downloader {
+
+    // Singleton pattern via enum
+    public enum Instance {
+        INSTANCE;
+
+        private final Semaphore semaphore = new Semaphore(3, true);  // only 3 concurrent downloads
+
+        public void download() {
+            try {
+                semaphore.acquire();     // blocks if 3 downloads are already in progress
+                try {
+                    downloadData();
+                } finally {
+                    semaphore.release();  // ALWAYS release — even on exception
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        private void downloadData() {
+            System.out.println(Thread.currentThread().getName() + " downloading data from the web");
+            try {
+                Thread.sleep(2000);   // simulate a 2-second download
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        ExecutorService service = Executors.newCachedThreadPool();
+
+        // 12 threads competing for only 3 download "slots"
+        for (int i = 0; i &lt; 12; i++) {
+            service.execute(Downloader.Instance.INSTANCE::download);
+        }
+        service.shutdown();
+    }
+}</code></pre>
+
+            <p><strong>What happens at runtime:</strong> 12 threads are submitted, but only 3 can call <code>downloadData()</code> at any given moment — the other 9 block inside <code>acquire()</code> until a permit is released. As each download finishes and calls <code>release()</code>, the next waiting thread (chosen fairly, since <code>fair=true</code>) acquires the freed permit and proceeds. This pattern is exactly how production systems throttle concurrent access to constrained resources — database connection pools, rate-limited external APIs, limited worker slots for CPU-intensive tasks.</p>
+            <p><strong>The mandatory <code>try/finally</code> pattern for <code>release()</code>:</strong> identical reasoning to <code>ReentrantLock.unlock()</code>. If <code>downloadData()</code> throws and <code>release()</code> isn't in a <code>finally</code> block, the permit is never returned — the pool of available slots silently shrinks by one forever (a "permit leak"), eventually starving all threads as every permit gets consumed and never returned.</p>
+
+            <hr>
+
+            <h3>Mutex vs. Semaphore — The Complete Comparison</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th>Mutex</th>
+                        <th>Semaphore</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Purpose</strong></td>
+                        <td>Mutual exclusion — exactly one thread in the critical section</td>
+                        <td>Signaling and resource counting — N threads in the critical section</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Permit count</strong></td>
+                        <td>Always exactly 1 (locked/unlocked)</td>
+                        <td>Any non-negative integer</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ownership</strong></td>
+                        <td><strong>Has ownership</strong> — only the thread that locked it may unlock it</td>
+                        <td><strong>No ownership</strong> — any thread can call <code>acquire()</code> or <code>release()</code>, regardless of which thread acquired which permit</td>
+                    </tr>
+                    <tr>
+                        <td><strong>What it protects</strong></td>
+                        <td>A critical section / race condition</td>
+                        <td>Access to a limited pool of resources</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Blocking condition</strong></td>
+                        <td>Blocks if already locked</td>
+                        <td>Blocks if available permit count is 0</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Release rule</strong></td>
+                        <td>Must be released by the thread that acquired it</td>
+                        <td>Can be released by ANY thread</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Java equivalents</strong></td>
+                        <td><code>synchronized</code> block/method, <code>ReentrantLock</code></td>
+                        <td><code>java.util.concurrent.Semaphore</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+<pre><code>// Mutex (via synchronized) — only the holding thread's own code path reaches the unlock point
+synchronized (this) {
+    // critical section — implicitly "released" only by the same thread exiting the block
+}
+
+// ReentrantLock — explicit ownership enforcement
+lock.lock();
+try { /* ... */ } finally { lock.unlock(); }
+// If a DIFFERENT thread calls lock.unlock() without having called lock() first:
+// → throws IllegalMonitorStateException — ownership is enforced
+
+// Semaphore — NO ownership enforcement
+Semaphore sem = new Semaphore(1);   // binary semaphore — acts like a mutex superficially
+// Thread A:
+sem.acquire();
+// Thread B (a completely different thread!):
+sem.release();    // ← perfectly legal! No exception, no ownership check</code></pre>
+
+            <p>This last example is the single most important practical distinction: a binary semaphore can be acquired by one thread and released by a completely different thread with no error — this is by design and is sometimes exactly what you want (e.g., one thread produces a "permit" event that releases another waiting thread — a signaling pattern), but it is also a foot-gun if you intended mutual exclusion and accidentally allowed cross-thread release.</p>
+
+            <hr>
+
+            <h3><code>synchronized</code> and <code>ReentrantLock</code> ARE Mutexes — Naming the Pattern</h3>
+            <p>The course material makes an important conceptual unification: <code>synchronized</code> blocks and <code>ReentrantLock</code> are not "similar to" a mutex — they <strong>are</strong> mutex implementations, specifically. When you use <code>synchronized(this)</code>, the object's intrinsic lock/monitor functions exactly as a mutex: only one thread at a time can execute the protected section, and the lock is conceptually "owned" by the entering thread (re-entrant for that same thread, blocking for any other thread). This naming exercise matters for interviews and cross-language conversations — "mutex" is the general computer science term; <code>synchronized</code>/<code>ReentrantLock</code> are Java's specific implementations of that general concept.</p>
+
+            <hr>
+
+            <h3>Mutex vs. Binary Semaphore — The Subtle but Critical Difference</h3>
+            <p>These two are often used interchangeably in casual conversation because they behave almost identically in the simple case — both allow exactly one thread access at a time. But the ownership distinction is fundamental and not cosmetic:</p>
+            <div class="highlight-box">
+                <p>"Ownership is the concept that when a task locks (acquires) a mutex, only that task is allowed to unlock (release) it." — if a synchronization construct lacks ownership semantics, it is not a true mutex, regardless of what it's called.</p>
+            </div>
+
+<pre><code>// Mutex (ReentrantLock) — ownership enforced
+ReentrantLock mutex = new ReentrantLock();
+mutex.lock();   // Thread A acquires
+// ... if Thread B calls mutex.unlock() without ever calling lock() first:
+// → IllegalMonitorStateException — the JVM REJECTS the unlock attempt
+//   and CRITICALLY: the mutex remains locked. The error doesn't silently succeed.
+
+// Binary Semaphore — no ownership
+Semaphore binarySem = new Semaphore(1);
+binarySem.acquire();   // Thread A acquires the single permit
+// Thread B calls:
+binarySem.release();   // succeeds with NO error — now 2 "permits" conceptually exist
+                        // even though only 1 was ever defined — this can corrupt
+                        // the intended invariant of "at most 1 thread in the critical section"</code></pre>
+
+            <p><strong>Why this matters in production:</strong> if you mistakenly use a binary semaphore where a true mutex was needed, a bug elsewhere in the code (a thread releasing a permit it never acquired, perhaps due to a logic error) will silently succeed and corrupt your mutual-exclusion invariant — potentially allowing 2 threads into a section meant to be strictly single-threaded, with no exception, no warning, no signal that anything went wrong. With a true mutex (<code>ReentrantLock</code>), the same bug throws <code>IllegalMonitorStateException</code> immediately, fails loudly, and — critically — <strong>the lock remains in its correct (locked) state</strong>, preserving the mutual exclusion invariant even in the presence of the bug.</p>
+            <p><strong>When to use which:</strong></p>
+            <ul>
+                <li>Use a <strong>mutex</strong> (<code>synchronized</code>/<code>ReentrantLock</code>) when protecting a critical section where you want ownership enforcement as a correctness safety net</li>
+                <li>Use a <strong>binary semaphore</strong> for pure signaling or coordination between threads where ownership isn't conceptually meaningful — e.g., a producer thread "releasing" a permit to wake a consumer thread that never "acquired" anything itself in the traditional sense</li>
+            </ul>
+
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation</h2>
+            
+            <h3>Real-World Use Case 1: Database Connection Pool Throttling</h3>
+
+<pre><code>import java.util.concurrent.Semaphore;
+import java.util.ArrayDeque;
+import java.util.Queue;
+
+public class ConnectionPool {
+    private final Semaphore availablePermits;
+    private final Queue&lt;Connection&gt; connections = new ArrayDeque&lt;&gt;();
+    private final Object poolLock = new Object();
+
+    public ConnectionPool(int poolSize) {
+        this.availablePermits = new Semaphore(poolSize, true);
+        for (int i = 0; i &lt; poolSize; i++) {
+            connections.offer(new Connection("conn-" + i));
+        }
+    }
+
+    public Connection acquire() throws InterruptedException {
+        availablePermits.acquire();   // blocks if pool is fully checked out
+        synchronized (poolLock) {
+            return connections.poll();   // semaphore guarantees a connection IS available here
+        }
+    }
+
+    public void release(Connection conn) {
+        synchronized (poolLock) {
+            connections.offer(conn);
+        }
+        availablePermits.release();   // signal that a permit (and connection) is available again
+    }
+
+    record Connection(String id) {}
+
+    public static void main(String[] args) throws InterruptedException {
+        ConnectionPool pool = new ConnectionPool(5);   // 5 connections max
+
+        Runnable task = () -&gt; {
+            try {
+                Connection conn = pool.acquire();
+                System.out.println(Thread.currentThread().getName() + " using " + conn.id());
+                Thread.sleep(500);   // simulate query execution
+                pool.release(conn);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        };
+
+        for (int i = 0; i &lt; 20; i++) {
+            new Thread(task, "client-" + i).start();
+        }
+        // Only 5 threads execute queries at any given moment; the other 15 wait their turn
+    }
+}</code></pre>
+
+            <p>Note the design: the <code>Semaphore</code> controls <strong>how many</strong> threads may proceed, while a separate synchronized <code>Queue</code> tracks <strong>which specific</strong> connection objects are available — exactly matching the course material's point that semaphores count permits but don't track identity.</p>
+
+            <hr>
+
+            <h3>Real-World Use Case 2: API Rate Limiting with <code>tryAcquire</code></h3>
+
+<pre><code>import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+
+public class ApiRateLimiter {
+    private final Semaphore rateLimitPermits;
+
+    public ApiRateLimiter(int maxConcurrentCalls) {
+        this.rateLimitPermits = new Semaphore(maxConcurrentCalls, true);
+    }
+
+    /**
+     * Attempts the API call only if a permit is available within the timeout.
+     * Returns a fallback response immediately if the system is overloaded —
+     * does NOT make the caller wait indefinitely.
+     */
+    public String callExternalApi(String request) {
+        try {
+            if (rateLimitPermits.tryAcquire(200, TimeUnit.MILLISECONDS)) {
+                try {
+                    return performApiCall(request);
+                } finally {
+                    rateLimitPermits.release();
+                }
+            } else {
+                return "FALLBACK: rate limit exceeded, try again later";
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return "ERROR: interrupted";
+        }
+    }
+
+    private String performApiCall(String request) {
+        // actual external HTTP call
+        return "response for " + request;
+    }
+}</code></pre>
+
+            <p>This pattern is exactly how production circuit-breaker and bulkhead patterns (in resilience libraries like Resilience4j) implement concurrency limiting under the hood — a semaphore-based bulkhead caps concurrent calls to a downstream dependency, protecting both the caller (no unbounded thread growth waiting on a slow dependency) and the callee (no overwhelming traffic).</p>
+
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture & Performance</h2>
+
+            <h3>Performance: Semaphore vs. ReentrantLock for the Binary Case</h3>
+            <p>For the n=1 binary case, <code>Semaphore</code> and <code>ReentrantLock</code> have very similar performance characteristics since both are built on AQS. The meaningful difference is not raw performance but semantic safety: <code>ReentrantLock</code>'s ownership enforcement converts certain classes of bugs (cross-thread unlock) from silent state corruption into loud, immediate exceptions. For genuine resource-pool throttling (n &gt; 1), <code>Semaphore</code> is the only directly appropriate tool — there is no clean way to express "allow up to N concurrent threads" using <code>ReentrantLock</code> alone without manually building a counting mechanism on top of it (which is, in effect, reimplementing <code>Semaphore</code>).</p>
+
+            <h3>Tradeoff Matrix: Mutex vs. Binary Semaphore vs. Counting Semaphore</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Mutex (<code>ReentrantLock</code>)</th>
+                        <th>Binary Semaphore</th>
+                        <th>Counting Semaphore</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Correctness safety net</strong></td>
+                        <td>High — ownership violations throw immediately</td>
+                        <td>None — silent misuse possible</td>
+                        <td>None — silent misuse possible</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Use case fit</strong></td>
+                        <td>Protecting a critical section with a clear "owner" thread</td>
+                        <td>Cross-thread signaling without ownership semantics</td>
+                        <td>Throttling access to N identical resources</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Risk of misuse</strong></td>
+                        <td>Lower — JVM catches ownership errors</td>
+                        <td>Higher — a stray <code>release()</code> corrupts the invariant silently</td>
+                        <td>Higher — same risk, amplified across N permits</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Idiomatic Java choice for mutual exclusion</strong></td>
+                        <td>✅ Preferred</td>
+                        <td>❌ Avoid unless ownership-free signaling is the actual intent</td>
+                        <td>N/A — different use case entirely</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Common Pitfalls (Senior Level)</h3>
+
+            <p><strong>1. Forgetting <code>release()</code> in a <code>finally</code> Block — Permit Leak</strong></p>
+<pre><code>semaphore.acquire();
+doWork();                 // throws an exception
+semaphore.release();      // NEVER REACHED — permit is lost forever
+
+// CORRECT
+semaphore.acquire();
+try {
+    doWork();
+} finally {
+    semaphore.release();   // always executes
+}</code></pre>
+            <p>Over time, repeated permit leaks shrink the available pool toward zero, eventually causing every thread to block indefinitely — a slow-motion deadlock that's especially hard to diagnose because it doesn't manifest immediately; the system degrades gradually as permits leak away one exception at a time.</p>
+
+            <p><strong>2. Calling <code>release()</code> More Times Than <code>acquire()</code> — Over-Releasing</strong></p>
+<pre><code>semaphore.acquire();    // count: 2 → 1
+semaphore.release();    // count: 1 → 2
+semaphore.release();    // BUG: count: 2 → 3 — exceeds the intended maximum!
+// Now MORE threads than intended can hold permits simultaneously,
+// silently violating the resource limit the semaphore was meant to enforce</code></pre>
+            <p>Unlike <code>ReentrantLock</code>, <code>Semaphore</code> does not throw an exception for this — <code>release()</code> can be called any number of times by any thread, and the permit count simply grows beyond its original maximum. This is a direct consequence of the no-ownership design and is a real production risk if release logic has any bugs (e.g., a retry path that calls <code>release()</code> twice).</p>
+
+            <p><strong>3. Using a Semaphore When a True Mutex Was Needed for Correctness-Critical Code</strong></p>
+            <p>If the code's correctness depends on strict ownership enforcement (e.g., you want a bug where Thread B incorrectly releases Thread A's lock to fail loudly rather than silently corrupt state), prefer <code>ReentrantLock</code> over <code>Semaphore(1)</code> even though they behave similarly in the happy path. The lack of an exception on misuse is a meaningful difference under bugs and edge cases, not just a stylistic one.</p>
+
+            <p><strong>4. Confusing "Available Permits" with "Currently Executing Threads"</strong></p>
+            <p><code>availablePermits()</code> reflects the <em>count</em>, not which specific threads or resources are involved. In a connection pool scenario, <code>availablePermits() == 3</code> tells you 3 connections are free, but says nothing about <em>which</em> 3 connections, or whether the application's separate connection-tracking data structure agrees with that count — a logic bug in the pairing code (like the example above) can desynchronize the semaphore's count from the actual resource pool's state.</p>
+
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: What is the fundamental difference between a mutex and a semaphore?</strong></p>
+            <p>A mutex provides mutual exclusion for a single resource — exactly one thread may hold it at a time, and critically, it has <strong>ownership semantics</strong>: only the thread that acquired the mutex may release it; attempting to release from a different thread is rejected with an error, and the mutex remains correctly locked. A semaphore is a more general construct that maintains a count of available permits — any non-negative integer, not just 0 or 1 — allowing a configurable number of threads to access a resource concurrently, and crucially has <strong>no ownership</strong>: any thread can call <code>acquire()</code> or <code>release()</code>, regardless of which thread did which operation previously. In Java, <code>synchronized</code> and <code>ReentrantLock</code> are mutex implementations; <code>java.util.concurrent.Semaphore</code> is the semaphore implementation, usable in both binary mode (acts like a lock) and counting mode (throttles access to N resources).</p>
+            <hr>
+
+            <p><strong>Q2: What is a binary semaphore and how does it differ from a true mutex despite both allowing only one thread at a time?</strong></p>
+            <p>A binary semaphore is a <code>Semaphore</code> initialized with exactly 1 permit — superficially it behaves like a mutex, allowing only one thread into the critical section at a time. The crucial difference is ownership: a true mutex enforces that only the thread that acquired the lock can release it (the JVM throws <code>IllegalMonitorStateException</code> if a different thread attempts to unlock), preserving the mutual exclusion invariant even in the presence of a bug. A binary semaphore has no such enforcement — <code>release()</code> can be called by any thread, including one that never called <code>acquire()</code>, with no error. This makes binary semaphores appropriate for cross-thread signaling (where one thread intentionally "releases" a permit for another thread that never held it) but inappropriate as a drop-in replacement for a mutex when correctness depends on ownership being enforced.</p>
+            <hr>
+
+            <p><strong>Q3: What does <code>Semaphore.acquire()</code> do if no permits are available, and what does <code>release()</code> do?</strong></p>
+            <p><code>acquire()</code> attempts to atomically decrement the semaphore's internal permit count. If the count is already at zero, the calling thread blocks (parks in the AQS wait queue, consuming zero CPU) until another thread calls <code>release()</code>, making a permit available. <code>release()</code> atomically increments the permit count and, if any threads are waiting, makes one of them eligible to proceed (the specific thread chosen depends on the fairness setting — FIFO if <code>fair=true</code>, unspecified otherwise). Both <code>acquire()</code> and <code>release()</code> can be called from any thread — <code>Semaphore</code> does not track which thread acquired which permit, unlike <code>ReentrantLock</code>'s ownership tracking.</p>
+            <hr>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: You need to limit concurrent access to an external API to at most 5 simultaneous calls across your entire application, regardless of which threads make the calls. Would you use <code>ReentrantLock</code> or <code>Semaphore</code>, and why?</strong></p>
+            <p><code>Semaphore</code>, specifically <code>new Semaphore(5, true)</code>. <code>ReentrantLock</code> only models a binary state — locked or unlocked, exactly one holder at a time — there's no clean way to express "up to 5 concurrent holders" with a single <code>ReentrantLock</code>; you'd have to manually build a counter on top of it (essentially reimplementing what <code>Semaphore</code> already provides correctly). <code>Semaphore</code> is purpose-built for exactly this throttling scenario: initialize with 5 permits, have every API-calling code path wrap the call in <code>acquire()</code>/<code>release()</code> (with <code>release()</code> in a <code>finally</code> block to prevent permit leaks on exception), and the semaphore automatically ensures no more than 5 threads execute the protected section concurrently, queuing (or, with <code>tryAcquire(timeout)</code>, timing out) the rest. The fairness flag (<code>true</code>) ensures threads are served in arrival order, preventing any caller from being starved indefinitely under sustained load.</p>
+            <hr>
+
+            <p><strong>Q5: A teammate proposes using <code>Semaphore(1)</code> instead of <code>ReentrantLock</code> to protect a critical section, arguing they're functionally equivalent. What risk are they introducing, and how would you explain it concretely?</strong></p>
+            <p>They're introducing the loss of ownership enforcement. In the happy path, <code>Semaphore(1)</code> and <code>ReentrantLock</code> behave identically — exactly one thread in the critical section at a time. The risk surfaces under bugs: with <code>ReentrantLock</code>, if a coding error causes a thread to call <code>unlock()</code> without having called <code>lock()</code> (e.g., an exception handling path that unconditionally calls cleanup code, including unlock, even on a path where the lock was never acquired), the JVM throws <code>IllegalMonitorStateException</code> immediately — the bug is caught loudly, and critically, the lock state remains internally consistent (still correctly locked if it was locked). With <code>Semaphore(1)</code>, the equivalent bug — a stray <code>release()</code> call from a thread that never called <code>acquire()</code> — succeeds silently with no exception. The permit count increments beyond its intended maximum of 1, meaning two threads can now simultaneously enter what was supposed to be a strictly single-threaded critical section — exactly the race condition the synchronization was meant to prevent, now silently reintroduced by a release-path bug. For correctness-critical mutual exclusion, the immediate, loud failure of <code>ReentrantLock</code> is a meaningful safety property that <code>Semaphore(1)</code> does not provide.</p>
+            <hr>
+
+            <h3>Advanced</h3>
+            <p><strong>Q6: Design a scenario where using a binary semaphore's lack-of-ownership property is actually the CORRECT design choice, not a bug risk.</strong></p>
+            <p>The canonical case is <strong>cross-thread signaling</strong>, where the semantics genuinely require one thread to "produce" a permit for another thread to "consume," without the producing thread ever holding the resource itself. Example: a worker thread pool where a dedicated "initializer" thread performs a one-time setup task, and N worker threads must wait until setup is complete before proceeding. Using <code>Semaphore(0)</code> (starts with zero permits): all N worker threads call <code>acquire()</code> immediately on startup and block (since the count is 0). The initializer thread, upon completing setup, calls <code>release(N)</code> (or <code>release()</code> N times) — releasing N permits at once, unblocking all N waiting workers simultaneously. Critically, the initializer thread never called <code>acquire()</code> — it only ever calls <code>release()</code>. This is fundamentally NOT a mutual-exclusion scenario; it's a one-directional signal-and-proceed pattern, which is exactly what <code>CountDownLatch</code> is purpose-built for (a later topic), but demonstrates precisely why semaphores were designed without ownership: many legitimate concurrency patterns are not mutual exclusion at all, but signaling, where the very idea of "the thread that acquired must be the one to release" doesn't apply because no single thread ever "acquires" in the traditional sense — the relationship is inherently asymmetric (one producer of permits, many consumers).</p>
+            <hr>
+
+            <p><strong>Q7: A counting semaphore initialized with 10 permits is protecting a connection pool, but over several days of production operation, <code>availablePermits()</code> trends toward zero even though connection usage patterns haven't changed. What is the most likely root cause and how do you confirm it?</strong></p>
+            <p>This is the signature of a <strong>slow permit leak</strong> — somewhere in the code, a code path acquires a permit (<code>acquire()</code>) but fails to release it (<code>release()</code>) under certain conditions, most commonly an exception path where <code>release()</code> was not placed in a <code>finally</code> block, or a conditional early-return that skips the release call. Each occurrence permanently reduces the effective pool size by one; over days of operation with intermittent exceptions, this compounds toward zero. Confirmation: (1) Instrument the code to log every <code>acquire()</code> and <code>release()</code> call with a correlation ID, and over a time window, count totals — a persistent imbalance (more acquires logged than releases) confirms the leak and its rate. (2) Audit every code path between <code>acquire()</code> and the corresponding <code>release()</code> for exception safety — specifically searching for any <code>acquire()</code> not immediately followed by a <code>try { ... } finally { release(); }</code> structure. (3) Use <code>availablePermits()</code> exposed via a metrics endpoint or JMX, graphed over time — a steady downward trend (rather than oscillation around a stable baseline) confirms systemic leakage rather than normal load variation. The fix is always structural: audit and correct every <code>acquire()</code>/<code>release()</code> pairing to guarantee the <code>try/finally</code> pattern, with no exceptions for "this path can't throw" assumptions — those assumptions are exactly where leaks originate as code evolves over time.</p>
+
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <p>After internalizing these notes, you should be able to:</p>
+            <ul>
+                <li><strong>Explain</strong> Dijkstra's original semaphore concept (1965), the <code>acquire()</code>/<code>release()</code> (P/V) operations, and why semaphores are considered a foundational building block for all higher-level synchronization primitives</li>
+                <li><strong>Distinguish</strong> binary semaphores (permit range 0–1, mutual exclusion) from counting semaphores (permit range 0–N, resource pool throttling), and identify which Java class and constructor parameters implement each</li>
+                <li><strong>Implement</strong> <code>Semaphore</code>-based resource throttling (connection pools, rate limiters, concurrent download limits) with the mandatory <code>try/finally</code> <code>release()</code> pattern</li>
+                <li><strong>Articulate</strong> the precise ownership distinction between a mutex (<code>synchronized</code>/<code>ReentrantLock</code>) and a semaphore: only the mutex enforces that the acquiring thread must be the releasing thread, and only the mutex throws an exception on violation</li>
+                <li><strong>Explain</strong> why <code>synchronized</code> blocks and <code>ReentrantLock</code> ARE mutex implementations, not merely "similar to" mutexes — connecting Java's specific keywords to the general computer science term</li>
+                <li><strong>Identify</strong> the silent-corruption risk of using a binary semaphore where a true mutex was needed — a stray cross-thread <code>release()</code> succeeds without error and can violate the mutual exclusion invariant</li>
+                <li><strong>Diagnose</strong> a permit leak in production (gradual decline in <code>availablePermits()</code>) by tracing <code>acquire()</code>/<code>release()</code> pairing for missing <code>finally</code> blocks</li>
+                <li><strong>Design</strong> a legitimate ownership-free signaling pattern using <code>Semaphore(0)</code> where one thread produces permits and others consume them, recognizing this as fundamentally different from mutual exclusion</li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
