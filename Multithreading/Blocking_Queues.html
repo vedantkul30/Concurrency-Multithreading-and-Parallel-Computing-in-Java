@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: Blocking Queues</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Title & Syllabus</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Definitions</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Multithreading: Blocking Queues</h1>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: -10px; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                <p><strong>Syllabus Coverage: Lectures 57–60</strong> (ArrayBlockingQueue · LinkedBlockingQueue · DelayQueue · PriorityBlockingQueue)</p>
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            
+            <div class="highlight-box">
+                <p><strong>One-Sentence Definition:</strong><br>
+                A <code>BlockingQueue</code> is a thread-safe queue that automatically makes producers wait when the queue is full and consumers wait when the queue is empty — eliminating the need to write <code>synchronized</code>, <code>wait()</code>, and <code>notify()</code> for the producer-consumer pattern entirely.</p>
+            </div>
+
+            <h3>The Architecture Analogy</h3>
+            <p>Picture a <strong>factory conveyor belt</strong> between a packing station (producer) and a loading dock (consumer). The belt has a fixed number of slots (capacity). When the belt is full, the packing station automatically pauses — the workers wait at the machine. When the belt is empty, the dock workers wait idle. No supervisor (synchronization code) needs to manage this — the belt's physical capacity enforces the coordination mechanically.</p>
+            <p>A <code>BlockingQueue</code> is that belt. <code>put()</code> is placing an item on the belt — blocks if all slots are full. <code>take()</code> is lifting an item off — blocks if the belt is empty. The "waiting" is handled entirely inside the queue, with zero application-level synchronization code required.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <p>All blocking queue implementations are built on <code>ReentrantLock</code> + <code>Condition</code> objects internally (exactly the pattern from the ReentrantLock chapter, but applied to a data structure so you never have to write it yourself):</p>
+
+<pre><code>// Conceptually what BlockingQueue implementations do internally:
+ReentrantLock lock = new ReentrantLock();
+Condition notFull  = lock.newCondition();  // producers await here
+Condition notEmpty = lock.newCondition();  // consumers await here
+
+void put(E item) throws InterruptedException {
+    lock.lock();
+    try {
+        while (isFull()) notFull.await();   // producer waits if full
+        add(item);
+        notEmpty.signal();                   // wake a waiting consumer
+    } finally { lock.unlock(); }
+}
+
+E take() throws InterruptedException {
+    lock.lock();
+    try {
+        while (isEmpty()) notEmpty.await(); // consumer waits if empty
+        E item = remove();
+        notFull.signal();                    // wake a waiting producer
+        return item;
+    } finally { lock.unlock(); }
+}</code></pre>
+
+            <p>This is a production-grade, tested, AQS-backed implementation of the exact <code>wait()/notify()</code> + <code>while</code> loop pattern from the synchronization chapter — handed to you for free in every <code>BlockingQueue</code> implementation.</p>
+
+
+            <h2 id="course-content">2. Course Content: Key Concepts & Definitions</h2>
+            
+            <h3>The <code>BlockingQueue</code> Interface — Core Methods</h3>
+
+<pre><code>import java.util.concurrent.BlockingQueue;</code></pre>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Behavior when full / empty</th>
+                        <th>Use when</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>put(e)</code></td>
+                        <td><strong>Blocks</strong> until space available</td>
+                        <td>Producer — never drop items</td>
+                    </tr>
+                    <tr>
+                        <td><code>take()</code></td>
+                        <td><strong>Blocks</strong> until item available</td>
+                        <td>Consumer — must process every item</td>
+                    </tr>
+                    <tr>
+                        <td><code>offer(e)</code></td>
+                        <td>Returns <code>false</code> immediately if full</td>
+                        <td>Producer — can tolerate dropping items</td>
+                    </tr>
+                    <tr>
+                        <td><code>offer(e, timeout, unit)</code></td>
+                        <td>Blocks up to timeout, then <code>false</code></td>
+                        <td>Producer — with timeout tolerance</td>
+                    </tr>
+                    <tr>
+                        <td><code>poll()</code></td>
+                        <td>Returns <code>null</code> immediately if empty</td>
+                        <td>Consumer — non-blocking check</td>
+                    </tr>
+                    <tr>
+                        <td><code>poll(timeout, unit)</code></td>
+                        <td>Blocks up to timeout, then <code>null</code></td>
+                        <td>Consumer — with timeout tolerance</td>
+                    </tr>
+                    <tr>
+                        <td><code>peek()</code></td>
+                        <td>Returns head without removing (null if empty)</td>
+                        <td>Non-destructive look-ahead</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>Never use <code>add()</code>/<code>remove()</code> on a <code>BlockingQueue</code> in concurrent code</strong> — these throw exceptions on overflow/underflow rather than blocking, defeating the purpose of a blocking queue entirely.</p>
+
+            <hr>
+
+            <h3><code>ArrayBlockingQueue</code> — Fixed Capacity, Single Lock</h3>
+
+<pre><code>import java.util.concurrent.ArrayBlockingQueue;
+
+// Bounded — capacity is FIXED at construction, cannot grow
+BlockingQueue&lt;Integer&gt; queue = new ArrayBlockingQueue&lt;&gt;(10);           // unfair (default)
+BlockingQueue&lt;Integer&gt; fairQueue = new ArrayBlockingQueue&lt;&gt;(10, true); // fair — FIFO ordering</code></pre>
+
+            <p><strong>Underlying structure:</strong> a circular buffer (fixed-size array with <code>head</code> and <code>tail</code> indices that wrap around). No shifting of elements — O(1) enqueue and dequeue. Memory-efficient and cache-friendly (all elements contiguous in memory).</p>
+            <p><strong>Lock architecture:</strong> a <strong>single <code>ReentrantLock</code></strong> for ALL operations — put, take, peek, size. Even a producer and a consumer calling <code>put()</code> and <code>take()</code> simultaneously must take turns — they cannot proceed in parallel.</p>
+
+<pre><code>Thread A: put()  ──── [single lock] ────────────────────►
+Thread B: take() ──── [same lock] → BLOCKED until A releases</code></pre>
+
+            <p><strong>Fairness parameter:</strong> when <code>fair = true</code>, the underlying <code>ReentrantLock</code> is created as <code>new ReentrantLock(true)</code> — threads are served in FIFO arrival order, preventing starvation. When <code>fair = false</code> (default), threads may "barge" — higher throughput, but possible starvation of long-waiting threads.</p>
+            <p><strong>When to use:</strong> fixed-capacity bounded buffer where memory footprint and predictability are priorities, especially in real-time or memory-sensitive applications. If fairness across competing producers/consumers is required, <code>ArrayBlockingQueue</code> is the only <code>BlockingQueue</code> with a fairness flag.</p>
+
+            <hr>
+
+            <h3><code>LinkedBlockingQueue</code> — Optional Capacity, Two Locks</h3>
+
+<pre><code>import java.util.concurrent.LinkedBlockingQueue;
+
+BlockingQueue&lt;String&gt; bounded   = new LinkedBlockingQueue&lt;&gt;(100);  // bounded — capacity = 100
+BlockingQueue&lt;String&gt; unbounded = new LinkedBlockingQueue&lt;&gt;();      // unbounded — Integer.MAX_VALUE</code></pre>
+
+            <p><strong>Underlying structure:</strong> a linked list of <code>Node</code> objects, each holding an item and a <code>next</code> reference. The queue maintains <code>head</code> (next item to take) and <code>tail</code> (next slot to put into) references.</p>
+            <p><strong>Lock architecture:</strong> <strong>two independent <code>ReentrantLock</code> objects</strong> — one for <code>put()</code> (the tail lock), one for <code>take()</code> (the head lock). A producer and consumer can operate <strong>simultaneously</strong> without blocking each other — because they access opposite ends of the linked list, they never share a lock.</p>
+
+<pre><code>Thread A (producer): put()  ──── [putLock] ────────────────►  (modifies tail)
+Thread B (consumer): take() ──── [takeLock] ───────────────►  (modifies head)
+↑ run TRULY IN PARALLEL — no mutual blocking between producer and consumer</code></pre>
+
+            <p><strong>Unbounded risk:</strong> <code>new LinkedBlockingQueue&lt;&gt;()</code> without a capacity argument uses <code>Integer.MAX_VALUE</code> (~2.1 billion) as the upper bound. In practice this means the queue grows without limit until the JVM runs out of heap memory — an <code>OutOfMemoryError</code> waiting to happen under sustained producer-faster-than-consumer scenarios. <strong>Always</strong> specify a capacity for production use: <code>new LinkedBlockingQueue&lt;&gt;(capacity)</code>.</p>
+            <p><strong>GC pressure:</strong> each <code>Node</code> is a separate heap allocation. Under high throughput, the allocation rate for <code>Node</code> objects can be significant — each <code>take()</code> discards a <code>Node</code> object for GC. <code>ArrayBlockingQueue</code> avoids this entirely since the array slot is reused.</p>
+            <p><strong>When to use:</strong> when producer and consumer should be able to run simultaneously (two-lock advantage), when you need a dynamically growing structure (bounded), or when you don't know the capacity in advance (always bound it anyway).</p>
+
+            <hr>
+
+            <h3><code>ArrayBlockingQueue</code> vs. <code>LinkedBlockingQueue</code> — Head-to-Head</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th><code>ArrayBlockingQueue</code></th>
+                        <th><code>LinkedBlockingQueue</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Capacity</strong></td>
+                        <td>Fixed — must specify at construction, cannot change</td>
+                        <td>Optional — bounded or unbounded</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Underlying structure</strong></td>
+                        <td>Circular array — O(1) operations, contiguous memory</td>
+                        <td>Linked list — O(1) operations, scattered memory</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Lock count</strong></td>
+                        <td>1 lock — put and take contend with each other</td>
+                        <td>2 locks — put and take can run in parallel</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Throughput under contention</strong></td>
+                        <td>Lower — single lock serializes even producer+consumer</td>
+                        <td>Higher — two locks allow true producer-consumer parallelism</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Memory efficiency</strong></td>
+                        <td>Higher — no per-item <code>Node</code> allocation overhead</td>
+                        <td>Lower — each item requires a <code>Node</code> object</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GC pressure</strong></td>
+                        <td>Zero — array slots reused</td>
+                        <td>Present — <code>Node</code> objects discarded on every <code>take()</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cache performance</strong></td>
+                        <td>Better — array elements are contiguous in memory</td>
+                        <td>Worse — <code>Node</code> pointers scattered across heap</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fairness support</strong></td>
+                        <td>✅ Yes — <code>new ArrayBlockingQueue(n, true)</code></td>
+                        <td>❌ No — no fairness option</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Surprising result</strong></td>
+                        <td>Often faster despite one lock</td>
+                        <td>Often slower despite two locks</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>The counterintuitive performance finding:</strong> <code>ArrayBlockingQueue</code> is often <em>faster</em> than <code>LinkedBlockingQueue</code> in benchmarks despite having only one lock vs. two. The reason is cache locality — the array's contiguous memory layout means CPU caches can prefetch elements efficiently, while <code>LinkedBlockingQueue</code>'s scattered <code>Node</code> objects cause frequent cache misses. The two-lock advantage only materializes under heavy sustained concurrent put+take loads where cache effects are outweighed by reduced lock contention.</p>
+
+            <hr>
+
+            <h3><code>DelayQueue</code> — Time-Gated Retrieval</h3>
+
+<pre><code>import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.TimeUnit;
+
+// Items can only be taken AFTER their individual delay has expired
+BlockingQueue&lt;Delayed&gt; queue = new DelayQueue&lt;&gt;();</code></pre>
+
+            <p><code>DelayQueue</code> is an unbounded <code>BlockingQueue</code> of objects implementing the <code>Delayed</code> interface. An item in the queue cannot be retrieved until its delay has expired. Items are ordered by remaining delay — the item whose delay expires soonest is at the head.</p>
+            <p><strong>Implementing <code>Delayed</code>:</strong></p>
+
+<pre><code>class DelayedTask implements Delayed {
+    private final String message;
+    private final long executeAfterMs;   // absolute time in ms when this becomes available
+
+    DelayedTask(String message, long delayMs) {
+        this.message = message;
+        this.executeAfterMs = System.currentTimeMillis() + delayMs;
+    }
+
+    @Override
+    public long getDelay(TimeUnit unit) {
+        // Returns REMAINING delay — negative means delay has expired
+        long remainingMs = executeAfterMs - System.currentTimeMillis();
+        return unit.convert(remainingMs, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public int compareTo(Delayed other) {
+        // Comparison determines ordering in the queue — shortest remaining delay = head
+        long diff = getDelay(TimeUnit.MILLISECONDS) - other.getDelay(TimeUnit.MILLISECONDS);
+        return (diff &lt; 0) ? -1 : (diff &gt; 0) ? 1 : 0;
+    }
+
+    @Override
+    public String toString() { return message; }
+}</code></pre>
+
+            <p><strong>Behavior of <code>take()</code> on a <code>DelayQueue</code>:</strong></p>
+            <ul>
+                <li>If no items have expired delay: blocks until the head item's delay expires</li>
+                <li>If head item's delay has expired: returns immediately</li>
+                <li><code>poll()</code> (non-blocking): returns <code>null</code> if no items have expired delay</li>
+            </ul>
+
+<pre><code>DelayQueue&lt;DelayedTask&gt; queue = new DelayQueue&lt;&gt;();
+
+// Add tasks with different delays
+queue.put(new DelayedTask("First message",  2000));   // available after 2s
+queue.put(new DelayedTask("Second message", 10000));  // available after 10s
+queue.put(new DelayedTask("Third message",  4500));   // available after 4.5s
+
+// Items are returned in delay-expiry order (not insertion order)
+System.out.println(queue.take());  // blocks ~2s → "First message"
+System.out.println(queue.take());  // blocks ~2.5s more → "Third message"
+System.out.println(queue.take());  // blocks ~5.5s more → "Second message"</code></pre>
+
+            <p><strong>Important caveats:</strong></p>
+            <ul>
+                <li><code>size()</code> returns the count of ALL items (both expired and unexpired) — not just retrievable ones</li>
+                <li><code>null</code> elements are not permitted</li>
+                <li>The queue is unbounded — <code>put()</code> never blocks</li>
+                <li>The <code>getDelay()</code> implementation must use <code>System.currentTimeMillis()</code> at call time (not at construction) to correctly return the <em>remaining</em> delay rather than the initial delay</li>
+            </ul>
+
+            <p><strong>Use cases:</strong> task scheduling with time-delayed execution, session expiry (sessions that expire after 30 minutes of inactivity), cache entry expiration, rate limiting with time windows.</p>
+
+            <hr>
+
+            <h3><code>PriorityBlockingQueue</code> — Priority-Ordered Retrieval</h3>
+
+<pre><code>import java.util.concurrent.PriorityBlockingQueue;
+
+// Unbounded — never blocks on put(), only on take() when empty
+BlockingQueue&lt;Integer&gt; queue = new PriorityBlockingQueue&lt;&gt;();
+
+// For custom objects: must implement Comparable&lt;T&gt; or provide a Comparator
+BlockingQueue&lt;Task&gt; priorityQueue = new PriorityBlockingQueue&lt;&gt;(11,
+    Comparator.comparingInt(Task::getPriority));</code></pre>
+
+            <p><code>PriorityBlockingQueue</code> is the thread-safe version of <code>PriorityQueue</code> — an unbounded, concurrent, blocking queue that orders items according to their natural ordering (<code>Comparable</code>) or a provided <code>Comparator</code>. The item with the lowest value (minimum heap) is always at the head.</p>
+
+            <p><strong>Underlying structure:</strong> a <strong>min-heap</strong> (binary heap) backed by a resizable array. Heap property: every parent node's value ≤ its children's values. The root (array index 0) is always the minimum element.</p>
+
+<pre><code>Heap visualization (min-heap of integers):
+          1          ← always at head (taken first)
+        /   \
+       3     5
+      / \   /
+     4   7 10</code></pre>
+
+            <p><strong>Lock architecture:</strong> a single <code>ReentrantLock</code> for all operations. No fairness option.</p>
+
+            <p><strong>Custom ordering with <code>Comparable</code>:</strong></p>
+
+<pre><code>class Person implements Comparable&lt;Person&gt; {
+    private final int age;
+    private final String name;
+
+    Person(int age, String name) { this.age = age; this.name = name; }
+
+    @Override
+    public int compareTo(Person other) {
+        return Integer.compare(this.age, other.age);   // ordered by age ascending
+        // or: return this.name.compareTo(other.name); // ordered alphabetically by name
+    }
+
+    @Override
+    public String toString() { return name + "(" + age + ")"; }
+}
+
+PriorityBlockingQueue&lt;Person&gt; queue = new PriorityBlockingQueue&lt;&gt;();
+queue.put(new Person(55, "Kevin"));
+queue.put(new Person(27, "Anna"));
+queue.put(new Person(31, "Daniel"));
+
+System.out.println(queue.take());  // Anna(27)  ← youngest first
+System.out.println(queue.take());  // Daniel(31)
+System.out.println(queue.take());  // Kevin(55)</code></pre>
+
+            <p><strong>Key characteristics:</strong></p>
+            <ul>
+                <li><strong>Unbounded</strong> — <code>put()</code> never blocks; array grows automatically (involves copying, which requires the single lock — all other threads wait during resize)</li>
+                <li><strong>No fairness</strong> — threads are not served in arrival order</li>
+                <li><strong>No guarantees on equal-priority items</strong> — items with the same comparison result have no defined relative ordering</li>
+                <li><strong><code>take()</code> blocks only when empty</strong> — this is the only blocking point</li>
+            </ul>
+
+            <p><strong>Use cases:</strong> priority-based task scheduling (high-priority jobs processed before low-priority), event processing where urgency varies, Dijkstra's shortest path algorithm (classic heap use case).</p>
+
+            <hr>
+
+            <h3>Complete Blocking Queue Family Comparison</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th><code>ArrayBlockingQueue</code></th>
+                        <th><code>LinkedBlockingQueue</code></th>
+                        <th><code>DelayQueue</code></th>
+                        <th><code>PriorityBlockingQueue</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Capacity</strong></td>
+                        <td>Fixed, bounded</td>
+                        <td>Optional bounded / unbounded</td>
+                        <td>Unbounded</td>
+                        <td>Unbounded</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ordering</strong></td>
+                        <td>FIFO</td>
+                        <td>FIFO</td>
+                        <td>By delay expiry</td>
+                        <td>By element priority</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Blocks on <code>put()</code></strong></td>
+                        <td>✅ Yes (when full)</td>
+                        <td>✅ Yes (if bounded, when full)</td>
+                        <td>❌ Never</td>
+                        <td>❌ Never</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Blocks on <code>take()</code></strong></td>
+                        <td>✅ Yes (when empty)</td>
+                        <td>✅ Yes (when empty)</td>
+                        <td>✅ Yes (when empty OR no expired items)</td>
+                        <td>✅ Yes (when empty)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Lock count</strong></td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>1</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fairness option</strong></td>
+                        <td>✅ Yes</td>
+                        <td>❌ No</td>
+                        <td>❌ No</td>
+                        <td>❌ No</td>
+                    </tr>
+                    <tr>
+                        <td><strong>GC pressure</strong></td>
+                        <td>Low (array)</td>
+                        <td>Medium (Node/item)</td>
+                        <td>Low</td>
+                        <td>Low (array)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Element requirements</strong></td>
+                        <td>Any</td>
+                        <td>Any</td>
+                        <td>Must implement <code>Delayed</code></td>
+                        <td>Must implement <code>Comparable</code> or provide <code>Comparator</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Null allowed</strong></td>
+                        <td>❌ No</td>
+                        <td>❌ No</td>
+                        <td>❌ No</td>
+                        <td>❌ No</td>
+                    </tr>
+                </tbody>
+            </table>
+
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation</h2>
+            
+            <h3>Complete Producer-Consumer with <code>ArrayBlockingQueue</code></h3>
+
+<pre><code>import java.util.concurrent.*;
+
+public class BlockingQueueProducerConsumer {
+
+    static class Producer implements Runnable {
+        private final BlockingQueue&lt;Integer&gt; queue;
+        private int counter = 0;
+
+        Producer(BlockingQueue&lt;Integer&gt; queue) { this.queue = queue; }
+
+        @Override
+        public void run() {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    queue.put(counter);   // blocks if queue is full
+                    System.out.println("Produced: " + counter++);
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }
+    }
+
+    static class Consumer implements Runnable {
+        private final BlockingQueue&lt;Integer&gt; queue;
+
+        Consumer(BlockingQueue&lt;Integer&gt; queue) { this.queue = queue; }
+
+        @Override
+        public void run() {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    int item = queue.take();  // blocks if queue is empty
+                    System.out.println("Consumed: " + item);
+                    Thread.sleep(300);        // consumer is slower — queue fills up
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        BlockingQueue&lt;Integer&gt; queue = new ArrayBlockingQueue&lt;&gt;(10, true);  // capacity=10, fair
+
+        Thread producer = new Thread(new Producer(queue), "producer");
+        Thread consumer = new Thread(new Consumer(queue), "consumer");
+
+        producer.start();
+        consumer.start();
+
+        Thread.sleep(5000);
+        producer.interrupt();
+        consumer.interrupt();
+    }
+}</code></pre>
+
+            <p>Note what this code does NOT contain compared to the manual <code>synchronized</code> + <code>wait()/notify()</code> producer-consumer from earlier lectures: no <code>synchronized</code> blocks, no <code>wait()</code>, no <code>notify()</code>, no <code>while</code> loop condition checks. The <code>BlockingQueue</code> handles all of it internally.</p>
+
+            <hr>
+
+            <h3>Real-World Use Case: Scheduled Task Execution with <code>DelayQueue</code></h3>
+
+<pre><code>import java.util.concurrent.*;
+
+public class TaskScheduler {
+
+    record ScheduledTask(String name, long executeAfterMs) implements Delayed {
+        @Override
+        public long getDelay(TimeUnit unit) {
+            return unit.convert(executeAfterMs - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+        }
+
+        @Override
+        public int compareTo(Delayed other) {
+            return Long.compare(
+                getDelay(TimeUnit.MILLISECONDS),
+                other.getDelay(TimeUnit.MILLISECONDS)
+            );
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        DelayQueue&lt;ScheduledTask&gt; queue = new DelayQueue&lt;&gt;();
+        long now = System.currentTimeMillis();
+
+        queue.put(new ScheduledTask("Send reminder email",    now + 5_000));
+        queue.put(new ScheduledTask("Expire user session",   now + 1_000));
+        queue.put(new ScheduledTask("Flush metrics buffer",  now + 3_000));
+
+        // Single consumer thread processes tasks as their delays expire
+        Thread dispatcher = new Thread(() -&gt; {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    ScheduledTask task = queue.take();  // blocks until earliest delay expires
+                    System.out.println("Executing: " + task.name() + " at " + System.currentTimeMillis());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }, "task-dispatcher");
+
+        dispatcher.start();
+        Thread.sleep(10_000);
+        dispatcher.interrupt();
+    }
+}</code></pre>
+
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture & Performance</h2>
+
+            <h3>Why Blocking Queues Eliminate the Need for Manual <code>wait()</code>/<code>notify()</code></h3>
+            <p>Every <code>BlockingQueue</code> implementation internally encapsulates the exact <code>ReentrantLock</code> + <code>Condition</code> + <code>while</code> loop pattern from the inter-thread communication chapter. The pattern the course teaches with <code>synchronized</code> + <code>wait()</code> + <code>notify()</code> is:</p>
+
+<pre><code>// Manual (raw synchronized) producer-consumer — what you write without BlockingQueue
+synchronized(buffer) {
+    while (buffer.size() == capacity) wait();
+    buffer.add(item);
+    notifyAll();
+}</code></pre>
+
+            <p>The <code>BlockingQueue</code> gives you this — battle-tested, with correct fairness handling, AQS-based parking (not OS-level <code>Object.wait()</code>), and all edge cases handled — for free. In production Java, you would never write the manual version for a producer-consumer problem — <code>BlockingQueue</code> exists precisely to replace it.</p>
+
+            <h3>Common Pitfalls (Senior Level)</h3>
+
+            <p><strong>1. Using an unbounded <code>LinkedBlockingQueue</code> — The Silent OOM</strong></p>
+<pre><code>BlockingQueue&lt;Task&gt; queue = new LinkedBlockingQueue&lt;&gt;();   // ← DANGEROUS
+// If producer consistently outpaces consumer, queue grows without bound
+// Application gradually eats more and more heap until OutOfMemoryError
+// Always bound it: new LinkedBlockingQueue&lt;&gt;(1000)</code></pre>
+
+            <p><strong>2. Using <code>add()</code>/<code>remove()</code> instead of <code>put()</code>/<code>take()</code> on a BlockingQueue</strong></p>
+<pre><code>queue.add(item);    // throws IllegalStateException if queue is full — no blocking
+queue.remove();     // throws NoSuchElementException if queue is empty — no blocking
+// In concurrent code: always use put()/take() or offer()/poll()</code></pre>
+
+            <p><strong>3. Implementing <code>getDelay()</code> with construction-time value instead of remaining time</strong></p>
+<pre><code>// WRONG: always returns the initial delay, never decrements
+public long getDelay(TimeUnit unit) {
+    return unit.convert(this.delayMs, TimeUnit.MILLISECONDS);   // fixed, never changes
+}
+
+// CORRECT: compute remaining delay at call time
+public long getDelay(TimeUnit unit) {
+    long remaining = executeAfterMs - System.currentTimeMillis();   // decrements over time
+    return unit.convert(remaining, TimeUnit.MILLISECONDS);
+}</code></pre>
+
+            <p><strong>4. Using <code>PriorityBlockingQueue</code> and expecting FIFO for equal-priority items</strong></p>
+<pre><code>// Items with equal compareTo() result have NO defined ordering
+// If you need priority-within-FIFO, include a sequence number in your compareTo():
+record Task(int priority, long seq, String name) implements Comparable&lt;Task&gt; {
+    @Override
+    public int compareTo(Task other) {
+        int cmp = Integer.compare(this.priority, other.priority);
+        return cmp != 0 ? cmp : Long.compare(this.seq, other.seq); // FIFO within same priority
+    }
+}</code></pre>
+
+            <p><strong>5. Not handling <code>InterruptedException</code> in <code>put()</code>/<code>take()</code> — Swallowing the Interrupt</strong></p>
+<pre><code>try { queue.take(); } catch (InterruptedException e) { /* ignore */ }
+// Swallowing the interrupt kills the thread's ability to respond to shutdown signals
+// Always: Thread.currentThread().interrupt(); in the catch block</code></pre>
+
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: What is a <code>BlockingQueue</code> and how does it simplify the producer-consumer pattern compared to using <code>synchronized</code> + <code>wait()</code>/<code>notify()</code>?</strong></p>
+            <p>A <code>BlockingQueue</code> is a thread-safe queue from <code>java.util.concurrent</code> that automatically makes producer threads wait (block) when the queue is full and consumer threads wait when the queue is empty. This eliminates the entire manual synchronization layer that the producer-consumer pattern otherwise requires: no <code>synchronized</code> blocks, no <code>wait()</code> calls, no <code>notify()</code> calls, no <code>while</code> loop condition guards, and no risk of missed notifications or spurious wakeup bugs. Internally, <code>BlockingQueue</code> implementations use <code>ReentrantLock</code> + <code>Condition</code> — exactly the pattern from the inter-thread communication chapter — but encapsulate it in a tested, production-grade class. In production Java code, you would not implement producer-consumer with raw <code>synchronized</code> + <code>wait()</code>/<code>notify()</code> — <code>BlockingQueue</code> is the standard tool.</p>
+            <hr>
+
+            <p><strong>Q2: What is the difference between <code>put()</code>/<code>take()</code> and <code>offer()</code>/<code>poll()</code> on a <code>BlockingQueue</code>?</strong></p>
+            <p><code>put()</code> and <code>take()</code> are <strong>blocking</strong> operations: <code>put()</code> waits indefinitely if the queue is full until space becomes available; <code>take()</code> waits indefinitely if the queue is empty until an item arrives. Both throw <code>InterruptedException</code> if the calling thread is interrupted while waiting. <code>offer()</code> and <code>poll()</code> are <strong>non-blocking</strong> (or bounded): <code>offer(item)</code> returns <code>false</code> immediately if the queue is full instead of blocking; <code>poll()</code> returns <code>null</code> immediately if the queue is empty. Both have timeout-based overloads (<code>offer(item, timeout, unit)</code>, <code>poll(timeout, unit)</code>) that wait up to the specified duration and then return <code>false</code>/<code>null</code>. Use <code>put()</code>/<code>take()</code> when items must never be dropped (you'd rather wait). Use <code>offer()</code>/<code>poll()</code> when the caller can tolerate rejection and must remain responsive.</p>
+            <hr>
+
+            <p><strong>Q3: What is the key difference in the lock architecture between <code>ArrayBlockingQueue</code> and <code>LinkedBlockingQueue</code>, and what does this mean for producer-consumer throughput?</strong></p>
+            <p><code>ArrayBlockingQueue</code> uses a single <code>ReentrantLock</code> for all operations — both <code>put()</code> and <code>take()</code> must acquire the same lock, meaning a producer and consumer cannot execute simultaneously even though they're operating on independent ends of the structure. <code>LinkedBlockingQueue</code> uses two independent locks — a <code>putLock</code> for <code>put()</code> operations (modifying the tail) and a <code>takeLock</code> for <code>take()</code> operations (modifying the head). Since a linked list's head and tail are independent pointers, a producer modifying the tail and a consumer modifying the head have no actual data-level conflict, and the two-lock design allows them to proceed truly in parallel. Under heavy sustained producer+consumer workloads, this means <code>LinkedBlockingQueue</code> can achieve roughly 2x the throughput by eliminating the producer-consumer lock contention. However, <code>ArrayBlockingQueue</code> often still outperforms in benchmarks due to superior cache locality — array elements are contiguous in memory, while <code>LinkedBlockingQueue</code>'s <code>Node</code> objects are scattered across the heap.</p>
+            <hr>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: Your <code>DelayQueue</code> consumer calls <code>take()</code> but blocks for a long time even though items were put in the queue 10 minutes ago. What is the most likely bug?</strong></p>
+            <p>The <code>getDelay()</code> implementation returns a fixed value based on the delay at construction time rather than computing the <em>remaining</em> delay at call time. A correct <code>getDelay()</code> must compute <code>executeAfterMs - System.currentTimeMillis()</code> — a value that decreases toward zero (and then goes negative) as time passes. If <code>getDelay()</code> was incorrectly implemented as <code>return unit.convert(this.initialDelayMs, TimeUnit.MILLISECONDS)</code> — returning the original delay duration every time — then from the queue's perspective, every item always has the same non-zero delay and is never considered "expired." <code>take()</code> would check the head item's delay, see it's still positive, and go back to waiting — indefinitely. Fix: ensure <code>getDelay()</code> subtracts the current system time from the stored absolute expiry timestamp.</p>
+            <hr>
+
+            <p><strong>Q5: You're building a task scheduler where tasks have different priorities but tasks of the same priority must be processed in the order they were submitted. Can you use <code>PriorityBlockingQueue</code> directly? If not, what modification do you need?</strong></p>
+            <p><code>PriorityBlockingQueue</code> cannot be used directly for this requirement. When two items have equal <code>compareTo()</code> result (same priority level), their relative ordering in the queue is undefined — heap operations during insertion and removal may reorder equal-priority items in any way the internal algorithm produces, with no FIFO guarantee among them. To achieve FIFO ordering within the same priority level, you must include a sequence number (or timestamp) as a secondary sort key in your <code>compareTo()</code> implementation: compare by priority first; if priorities are equal, compare by the sequence number that was assigned at submission time. The sequence number must be monotonically increasing (use an <code>AtomicLong</code> to assign it thread-safely), and items with the same priority will then be ordered by submission order within that priority level.</p>
+            <hr>
+
+            <h3>Advanced</h3>
+            <p><strong>Q6: Explain why <code>ArrayBlockingQueue</code> sometimes outperforms <code>LinkedBlockingQueue</code> despite having one lock vs. two, and in what specific workload scenario does <code>LinkedBlockingQueue</code> genuinely win?</strong></p>
+            <p>The two-lock advantage of <code>LinkedBlockingQueue</code> is theoretically sound but empirically often outweighed by <code>ArrayBlockingQueue</code>'s cache locality advantage. <code>ArrayBlockingQueue</code> stores elements in a contiguous array — when the CPU prefetches cache lines for the queue's elements, it loads multiple consecutive elements into L1/L2 cache simultaneously. <code>LinkedBlockingQueue</code>'s <code>Node</code> objects are individual heap allocations scattered across memory, so each pointer dereference (following <code>node.next</code>) risks a cache miss that requires a main-memory fetch (~100ns vs ~1ns for L1 cache). Under moderate workloads, the cache miss overhead of <code>LinkedBlockingQueue</code> exceeds the lock contention savings from the two-lock design. <code>LinkedBlockingQueue</code> genuinely wins under sustained, high-throughput workloads where: (a) producer and consumer operate at nearly identical rates (sustained heavy contention on <code>ArrayBlockingQueue</code>'s single lock), (b) items are large objects (so the per-node overhead is proportionally small), and (c) the JVM's GC is tuned to handle the <code>Node</code> allocation churn efficiently. Benchmarking on your specific hardware and workload is always necessary before assuming which is faster.</p>
+
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <p>After internalizing these notes, you should be able to:</p>
+            <ul>
+                <li><strong>Explain</strong> what a <code>BlockingQueue</code> does that raw <code>ArrayList</code> or <code>synchronized</code> wrappers don't — specifically the automatic blocking-on-full/blocking-on-empty behavior that eliminates manual <code>wait()</code>/<code>notify()</code> code</li>
+                <li><strong>Choose</strong> between <code>put()</code>/<code>take()</code> and <code>offer()</code>/<code>poll()</code> correctly based on whether the caller can tolerate dropped items or must wait</li>
+                <li><strong>Implement</strong> <code>ArrayBlockingQueue</code> with appropriate capacity and fairness setting, and explain why a single lock serializes both put and take operations</li>
+                <li><strong>Implement</strong> <code>LinkedBlockingQueue</code> with a bounded capacity (never the unbounded default in production), and explain the two-lock architecture that allows producer and consumer to run simultaneously</li>
+                <li><strong>Compare</strong> <code>ArrayBlockingQueue</code> and <code>LinkedBlockingQueue</code> across capacity flexibility, lock count, cache locality, GC pressure, and fairness support — and choose correctly for a given scenario</li>
+                <li><strong>Implement</strong> <code>DelayQueue</code> with a correct <code>Delayed</code> interface — specifically, writing <code>getDelay()</code> to return <em>remaining</em> delay (computed at call time) rather than the initial delay value</li>
+                <li><strong>Implement</strong> <code>PriorityBlockingQueue</code> with both <code>Comparable</code> and <code>Comparator</code> ordering, and add a sequence number tie-breaker to enforce FIFO ordering within equal-priority items</li>
+                <li><strong>Compare</strong> all four implementations across the six dimensions in the family comparison table and pick the appropriate one for a described workload</li>
+                <li><strong>Identify</strong> the five common pitfalls: unbounded <code>LinkedBlockingQueue</code>, using <code>add()</code>/<code>remove()</code> instead of <code>put()</code>/<code>take()</code>, wrong <code>getDelay()</code> implementation, missing FIFO within equal priority, and swallowing <code>InterruptedException</code></li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
