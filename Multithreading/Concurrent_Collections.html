@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: Concurrent Collections</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Title & Syllabus</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Definitions</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Multithreading: ConcurrentHashMap, CopyOnWriteArrayList & Exchanger</h1>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: -10px; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                <p><strong>Syllabus Coverage: Lectures 61–63</strong> (ConcurrentHashMap · Slipping Conditions · CopyOnWriteArrayList · Exchanger)</p>
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            
+            <div class="highlight-box">
+                <p><strong>One-Sentence Definition:</strong><br>
+                <code>ConcurrentHashMap</code> achieves thread-safe map operations at near-single-threaded read speed by eliminating locks on reads entirely and using the finest possible lock granularity (per-bucket) for writes; <code>CopyOnWriteArrayList</code> achieves thread-safe list reads at zero lock cost by making writers pay the full cost of copying the backing array; and <code>Exchanger</code> provides a rendezvous point where exactly two threads swap objects in a single atomic operation.</p>
+            </div>
+
+            <h3>The Architecture Analogy</h3>
+            <p><strong><code>ConcurrentHashMap</code></strong> is a modern library with one rule for readers: "just walk in and read any shelf, no sign-in needed — volatile guarantees mean the shelf is always current." Writers have a more nuanced rule: "if you're writing to an empty shelf, use the self-checkout atomically (CAS). If you're writing to a shelf that already has something, lock just that one specific shelf — not the whole library, not a wing, just that one shelf." This is maximum read throughput (zero lock cost) with minimal write contention (one lock per bucket).</p>
+            <p><strong><code>CopyOnWriteArrayList</code></strong> is a museum exhibit. Visitors (readers) walk through freely — no tickets, no guards, any number of visitors simultaneously. But if the museum wants to add or rearrange an exhibit (write), it temporarily creates an exact duplicate of the entire museum in a back room, makes the change there, then atomically swaps the public gallery to the new copy. Visitors in the original gallery see nothing change mid-walk — they're reading an immutable snapshot. Only after the swap do new visitors see the updated layout. Reads are free; writes are expensive.</p>
+            <p><strong><code>Exchanger</code></strong> is a spy dead-drop rendezvous. Thread A arrives at the exchange point and waits. Thread B arrives and waits. The moment both are present, they simultaneously swap their packages and both walk away with the other's item. If only one arrives, it waits. There's no exchange without both parties present — and exactly two parties, never more.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <p><strong><code>ConcurrentHashMap</code> reads (Java 8+):</strong> field values in map nodes are declared <code>volatile</code>, and the array itself is <code>volatile</code>. A read via <code>get()</code> involves no lock acquisition — the <code>volatile</code> reads establish happens-before with the prior writes that stored the values. The JVM's memory barrier instructions guarantee the reader sees the most recent writer's value without any explicit synchronization object.</p>
+            <p><strong><code>ConcurrentHashMap</code> writes:</strong> First insert into an empty bin: <code>casTabAt()</code> — a Compare-And-Swap on the array slot (atomic, lock-free). Subsequent inserts into an occupied bin: <code>synchronized(binHead)</code> — locks the first node of the linked list or TreeBin object (bin-level granularity, not segment, not table). Resize: locks the entire table briefly — all threads see MOVED nodes and help with rehashing.</p>
+            <p><strong><code>CopyOnWriteArrayList</code> writes:</strong> <code>ReentrantLock</code> serializes all write operations. Writer acquires lock, copies array (<code>Arrays.copyOf()</code>), makes modification on copy, then atomically sets the internal <code>array</code> reference via <code>volatile</code> write, releases lock. Readers always dereference the current <code>volatile array</code> reference — they read an immutable snapshot without any lock.</p>
+            <p><strong><code>Exchanger</code>:</strong> internally uses <code>LockSupport.park()/unpark()</code> and CAS on a <code>Slot</code> object. First thread to arrive CAS-stores its item and parks. Second thread CAS-swaps items and unparks the first thread. Both receive the other's item atomically.</p>
+
+
+            <h2 id="course-content">2. Course Content: Key Concepts & Definitions</h2>
+            
+            <h3><code>ConcurrentHashMap</code> — Architecture and Internal Evolution</h3>
+            <p>The evolution matters because Java 8 fundamentally changed how <code>ConcurrentHashMap</code> works:</p>
+            <p><strong>Before Java 8 (segment-based):</strong> the array was divided into a fixed number of segments (16 by default), each with its own <code>ReentrantLock</code>. Writes to different segments could proceed in parallel; reads within a segment required the segment lock.</p>
+            <p><strong>Java 8 and later (bin-level locking):</strong> segments are gone. The structure is a single flat array of bins (buckets). Reads are lock-free via <code>volatile</code>. Writes lock at the individual bin level — the smallest possible unit.</p>
+
+<pre><code>Array:
+[bin 0] → null
+[bin 1] → Node(key="A", val=1) → Node(key="Q", val=7)   ← linked list (collision)
+[bin 2] → null
+[bin 3] → TreeBin(root=Node...)                           ← red-black tree (≥8 collisions)
+...</code></pre>
+
+            <p><strong>Read operations (lock-free):</strong></p>
+
+<pre><code>ConcurrentHashMap&lt;String, Integer&gt; map = new ConcurrentHashMap&lt;&gt;();
+
+// get() — NO lock, NO synchronized, NO volatile acquire beyond reading node.val
+Integer value = map.get("key");   // safe to call from any number of threads simultaneously</code></pre>
+
+            <p>Why reads are safe without locks: the node's <code>value</code> field and the <code>next</code> pointer are <code>volatile</code>. The <code>volatile</code> write that stored the value happens-before the <code>volatile</code> read that retrieves it — the JMM's happens-before chain ensures the reader sees the writer's value without any explicit synchronization.</p>
+
+            <p><strong>Write operations (bin-level locking):</strong></p>
+
+<pre><code>map.put("newKey", 42);
+// Internally:
+// 1. Hash "newKey" → compute bin index
+// 2. If bin is empty: CAS (compare-and-swap) the null slot atomically — no lock
+// 3. If bin has a node: synchronized(binHead) { ... traverse/insert ... }
+//    — locks ONLY THIS ONE BIN, not the entire map</code></pre>
+
+            <p>This is the key insight: two <code>put()</code> calls on different keys that hash to different bins proceed <strong>completely in parallel</strong> — they hold different locks, have no contention with each other whatsoever.</p>
+
+            <hr>
+
+            <h3>The Slipping Condition — Why Even <code>ConcurrentHashMap</code> Has Pitfalls</h3>
+            <p><code>ConcurrentHashMap</code> guarantees atomicity for individual operations (<code>put</code>, <code>get</code>, <code>remove</code>, <code>containsKey</code>). It does NOT guarantee atomicity for <strong>compound operations</strong> — sequences of multiple calls that must appear as a single atomic unit.</p>
+
+<pre><code>ConcurrentMap&lt;String, String&gt; map = new ConcurrentHashMap&lt;&gt;();
+
+// SLIPPING CONDITION — looks reasonable, is a race condition:
+if (!map.containsKey("key")) {          // Thread A checks: "key" absent — true
+                                         // Thread B also checks: "key" absent — true (same time!)
+    map.put("key", "value");            // Thread A inserts
+                                         // Thread B ALSO inserts, overwriting A's value
+}
+// Both threads thought they were the first inserter — both executed put() — a lost update</code></pre>
+
+            <p>This is called a <strong>slipping condition</strong> (also known as a "check-then-act" race condition): two threads both check, both see the same state, and both act — producing a result neither intended.</p>
+
+            <p><strong>The fix: use atomic compound methods built into <code>ConcurrentHashMap</code>:</strong></p>
+
+<pre><code>// putIfAbsent: atomically checks and inserts ONLY if key is absent
+// Returns the existing value if key was already present, null if insertion succeeded
+String existing = map.putIfAbsent("key", "value");
+if (existing == null) {
+    System.out.println("Successfully inserted");
+} else {
+    System.out.println("Key already existed: " + existing);
+}
+
+// computeIfAbsent: atomically compute and insert if absent
+// More powerful — can use the key to compute the value
+map.computeIfAbsent("user-123", key -&gt; loadUserFromDatabase(key));
+
+// compute: atomically update a value based on current value
+map.compute("counter", (key, current) -&gt; (current == null) ? 1 : current + 1);
+
+// merge: atomically merge old and new values with a function
+map.merge("count", 1, Integer::sum);   // add 1 to existing value (or put 1 if absent)</code></pre>
+
+            <p><strong>The key principle:</strong> any time your code does "check the map, then conditionally write to the map" — the gap between check and write is a slipping window where another thread can intervene. Always replace the two-step pattern with the corresponding atomic single-operation method from <code>ConcurrentMap</code>.</p>
+
+            <p><strong>Why synchronizing on the map is wrong:</strong></p>
+
+<pre><code>// "Solution" — but a bad one
+synchronized (map) {
+    if (!map.containsKey("key")) {
+        map.put("key", "value");
+    }
+}</code></pre>
+
+            <p>This works but defeats the purpose of <code>ConcurrentHashMap</code> entirely — you've reduced it to a single global lock on the whole map, the same bottleneck as <code>Collections.synchronizedMap()</code>. The atomic <code>ConcurrentMap</code> methods are the correct solution because they operate at bin-level granularity, not table-level.</p>
+
+            <hr>
+
+            <h3><code>ConcurrentHashMap</code> — Internal Red-Black Tree Conversion</h3>
+            <p>When a single bin accumulates more than 8 nodes (many hash collisions), the linked list is automatically converted to a red-black tree for O(log n) access instead of O(n):</p>
+
+<pre><code>Bin with 8+ collisions:
+Before: Node → Node → Node → Node → Node → Node → Node → Node  (linked list, O(n))
+After:          TreeBin (wraps red-black tree root)             (O(log n))</code></pre>
+
+            <p>This introduces a subtle locking challenge: red-black tree rotations can change the root node. Locking on the root (as you would with a linked list's head node) would be unsafe — the root can change during rotation, meaning two threads might inadvertently hold different locks. The solution: <code>ConcurrentHashMap</code> wraps the tree in a <code>TreeBin</code> object that never changes. All threads synchronize on the <code>TreeBin</code> instance — a stable anchor — regardless of how the tree structure evolves internally.</p>
+
+            <hr>
+
+            <h3><code>CopyOnWriteArrayList</code> — Read-Optimized List</h3>
+
+<pre><code>import java.util.concurrent.CopyOnWriteArrayList;
+
+// Implements List — drop-in replacement for ArrayList in concurrent read-heavy scenarios
+List&lt;String&gt; list = new CopyOnWriteArrayList&lt;&gt;();
+list.add("item1");   // safe from any thread — internally copies the array
+list.add("item2");</code></pre>
+
+            <p><strong>How writes work (the "copy-on-write" mechanism):</strong></p>
+
+<pre><code>// Conceptual implementation of add():
+ReentrantLock lock = new ReentrantLock();
+volatile Object[] array;   // the backing array — always immutable once visible
+
+public void add(E element) {
+    lock.lock();
+    try {
+        Object[] current = array;
+        Object[] newArray = Arrays.copyOf(current, current.length + 1);  // O(n) copy
+        newArray[current.length] = element;
+        array = newArray;   // volatile write — atomically switches readers to new array
+    } finally {
+        lock.unlock();
+    }
+}</code></pre>
+
+            <p><strong>How reads work (lock-free):</strong></p>
+
+<pre><code>public E get(int index) {
+    return (E) array[index];   // reads the volatile 'array' reference — NO lock
+}</code></pre>
+
+            <p>A reader always sees either the old array or the new array — never a half-modified intermediate state. This is because the modification is made to a <em>copy</em>, and only the final <code>volatile</code> write switches the reference. Any reader that started reading the old array will complete its read on the old (immutable) array; any reader that starts after the <code>volatile</code> write sees the new array. There is no moment where the array is partially modified.</p>
+
+            <p><strong>Iteration is always safe — reads a snapshot:</strong></p>
+
+<pre><code>// This is completely safe even if another thread adds/removes items mid-iteration
+for (String item : list) {
+    process(item);
+}
+// The iterator holds a reference to the array snapshot at the moment iteration started
+// New additions after iteration started are invisible to this iterator (not ConcurrentModificationException)</code></pre>
+
+            <p>This is the reverse of <code>Collections.synchronizedList</code> — which is individually synchronized per method call but still throws <code>ConcurrentModificationException</code> on concurrent iteration if you don't manually synchronize the whole loop.</p>
+
+            <p><strong>When to use vs. when not to:</strong></p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Scenario</th>
+                        <th><code>CopyOnWriteArrayList</code>?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Read-heavy: 1000 reads per 1 write</td>
+                        <td>✅ Excellent — reads are free</td>
+                    </tr>
+                    <tr>
+                        <td>Write-heavy: 1000 writes per 1 read</td>
+                        <td>❌ Terrible — O(n) copy per write, high GC pressure</td>
+                    </tr>
+                    <tr>
+                        <td>Iteration must be consistent mid-traversal</td>
+                        <td>✅ Yes — iterator sees immutable snapshot</td>
+                    </tr>
+                    <tr>
+                        <td>Large list with frequent writes</td>
+                        <td>❌ Use <code>ConcurrentLinkedQueue</code> or <code>LinkedBlockingQueue</code></td>
+                    </tr>
+                    <tr>
+                        <td>Listener/observer lists (add once, iterate many times)</td>
+                        <td>✅ Perfect use case</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <hr>
+
+            <h3><code>Exchanger</code> — Two-Thread Object Swap</h3>
+
+<pre><code>import java.util.concurrent.Exchanger;
+
+// Generic — specify the type of object being exchanged
+Exchanger&lt;Integer&gt; exchanger = new Exchanger&lt;&gt;();</code></pre>
+
+            <p>An <code>Exchanger</code> provides a synchronization point at which two threads can exchange objects. Each thread calls <code>exchange(myItem)</code> — the call blocks until the <em>other</em> thread also calls <code>exchange()</code>. At that moment, both threads atomically receive the other's item.</p>
+
+<pre><code>class FirstThread implements Runnable {
+    private final Exchanger&lt;Integer&gt; exchanger;
+    private int counter = 0;
+
+    FirstThread(Exchanger&lt;Integer&gt; exchanger) { this.exchanger = exchanger; }
+
+    @Override
+    public void run() {
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                counter++;
+                System.out.println("First thread: sending " + counter);
+                counter = exchanger.exchange(counter);   // sends counter, receives other thread's counter
+                System.out.println("First thread: received " + counter);
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+}
+
+class SecondThread implements Runnable {
+    private final Exchanger&lt;Integer&gt; exchanger;
+    private int counter = 0;
+
+    SecondThread(Exchanger&lt;Integer&gt; exchanger) { this.exchanger = exchanger; }
+
+    @Override
+    public void run() {
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                counter--;
+                System.out.println("Second thread: sending " + counter);
+                counter = exchanger.exchange(counter);  // sends counter, receives other thread's counter
+                System.out.println("Second thread: received " + counter);
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+}
+
+public class ExchangerExample {
+    public static void main(String[] args) throws InterruptedException {
+        Exchanger&lt;Integer&gt; exchanger = new Exchanger&lt;&gt;();
+        Thread t1 = new Thread(new FirstThread(exchanger), "first");
+        Thread t2 = new Thread(new SecondThread(exchanger), "second");
+        t1.start();
+        t2.start();
+        Thread.sleep(5000);
+        t1.interrupt();
+        t2.interrupt();
+    }
+}</code></pre>
+
+            <p><strong>Execution trace:</strong></p>
+<pre><code>First thread: sending 1        (increments 0 → 1, calls exchange(1), blocks)
+Second thread: sending -1      (decrements 0 → -1, calls exchange(-1), blocks)
+[both arrive at exchange point]
+First thread: received -1      (got second thread's value)
+Second thread: received 1      (got first thread's value)</code></pre>
+
+            <p><strong>Critical constraints:</strong></p>
+            <ul>
+                <li><code>Exchanger</code> works with <strong>exactly two threads</strong> — no more, no less. If only one thread calls <code>exchange()</code>, it blocks indefinitely waiting for a second thread that never comes</li>
+                <li>Both threads must call <code>exchange()</code> on the <strong>same <code>Exchanger</code> instance</strong></li>
+                <li>The exchange is <strong>mutual and simultaneous</strong> — neither thread proceeds until both have called <code>exchange()</code></li>
+                <li>Use <code>exchanger.exchange(item, timeout, unit)</code> (throws <code>TimeoutException</code>) rather than the unbounded <code>exchange(item)</code> to avoid indefinite blocking if the partner thread fails to arrive</li>
+            </ul>
+
+            <p><strong>Thread-local variable access:</strong> <code>Exchanger</code> solves the problem of sharing data between specific thread pairs without shared heap objects. Each thread keeps its data in local variables (on the stack — completely private), and the exchanger is the only crossing point — a clean, explicit, bidirectional data transfer.</p>
+
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation</h2>
+            
+            <h3>Complete <code>ConcurrentHashMap</code> Example with Atomic Compound Methods</h3>
+
+<pre><code>import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class ConcurrentMapExample {
+
+    record UserProfile(String name, int loginCount) {}
+
+    public static void main(String[] args) throws InterruptedException {
+        ConcurrentMap&lt;String, UserProfile&gt; profiles = new ConcurrentHashMap&lt;&gt;();
+        ConcurrentMap&lt;String, AtomicInteger&gt; loginCounts = new ConcurrentHashMap&lt;&gt;();
+
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+
+        // Simulate 100 concurrent login events across 5 users
+        for (int i = 0; i &lt; 100; i++) {
+            String userId = "user-" + (i % 5);
+            executor.submit(() -&gt; handleLogin(profiles, loginCounts, userId));
+        }
+
+        executor.shutdown();
+        executor.awaitTermination(10, TimeUnit.SECONDS);
+
+        // Print final login counts
+        loginCounts.forEach((userId, count) -&gt;
+            System.out.printf("%s: %d logins%n", userId, count.get()));
+    }
+
+    static void handleLogin(ConcurrentMap&lt;String, UserProfile&gt; profiles,
+                            ConcurrentMap&lt;String, AtomicInteger&gt; loginCounts,
+                            String userId) {
+        // computeIfAbsent: atomically create profile if it doesn't exist
+        profiles.computeIfAbsent(userId, id -&gt; new UserProfile(id, 0));
+
+        // computeIfAbsent to create the counter, then increment — all thread-safe
+        loginCounts.computeIfAbsent(userId, id -&gt; new AtomicInteger(0))
+                   .incrementAndGet();
+    }
+}</code></pre>
+
+            <hr>
+
+            <h3>Real-World Use Case: <code>CopyOnWriteArrayList</code> for Event Listeners</h3>
+
+<pre><code>import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class EventBus {
+    // Perfect use case: listeners added rarely, events fired frequently
+    private final List&lt;EventListener&gt; listeners = new CopyOnWriteArrayList&lt;&gt;();
+
+    @FunctionalInterface
+    interface EventListener { void onEvent(String event); }
+
+    // Called occasionally — adding one listener copies the whole list
+    public void subscribe(EventListener listener) {
+        listeners.add(listener);   // thread-safe, O(n) copy — infrequent, acceptable
+    }
+
+    public void unsubscribe(EventListener listener) {
+        listeners.remove(listener);
+    }
+
+    // Called thousands of times per second — zero lock cost for reading the listener list
+    public void publish(String event) {
+        for (EventListener listener : listeners) {   // iterates immutable snapshot — never throws ConcurrentModificationException
+            listener.onEvent(event);
+        }
+    }
+}</code></pre>
+
+            <p>Event bus/observer patterns are the textbook <code>CopyOnWriteArrayList</code> use case: listeners are added at startup or rarely during runtime, but events are dispatched at high frequency. The copy-on-write trade-off (O(n) write cost) is entirely acceptable when writes are rare.</p>
+
+            <hr>
+
+            <h3>Real-World Use Case: <code>Exchanger</code> for Ping-Pong Data Pipeline</h3>
+
+<pre><code>import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PingPongPipeline {
+
+    public static void main(String[] args) throws InterruptedException {
+        Exchanger&lt;List&lt;Integer&gt;&gt; exchanger = new Exchanger&lt;&gt;();
+
+        // Producer fills a buffer, then exchanges it with the consumer's empty buffer
+        // Consumer processes the full buffer while producer refills the returned empty one
+        Thread producer = new Thread(() -&gt; {
+            List&lt;Integer&gt; buffer = new ArrayList&lt;&gt;();
+            try {
+                for (int cycle = 0; cycle &lt; 5; cycle++) {
+                    // Fill the buffer
+                    for (int i = 0; i &lt; 10; i++) buffer.add(cycle * 10 + i);
+                    System.out.println("Producer filled: " + buffer);
+
+                    // Exchange full buffer for the consumer's emptied buffer
+                    buffer = exchanger.exchange(buffer);
+                    System.out.println("Producer received empty buffer, size: " + buffer.size());
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "producer");
+
+        Thread consumer = new Thread(() -&gt; {
+            List&lt;Integer&gt; buffer = new ArrayList&lt;&gt;();   // starts with an empty buffer
+            try {
+                for (int cycle = 0; cycle &lt; 5; cycle++) {
+                    // Exchange empty buffer for producer's full buffer
+                    buffer = exchanger.exchange(buffer);
+                    System.out.println("Consumer processing: " + buffer.size() + " items");
+                    buffer.clear();   // process and empty the buffer
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "consumer");
+
+        producer.start();
+        consumer.start();
+        producer.join();
+        consumer.join();
+    }
+}</code></pre>
+
+            <p>This "double-buffer exchange" pattern lets the producer and consumer work on separate buffers simultaneously — the producer fills one buffer while the consumer processes the other, then they swap. This avoids any copying of items (only the buffer references are exchanged) and allows both threads to work without interference.</p>
+
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture & Performance</h2>
+
+            <h3><code>ConcurrentHashMap</code> vs. <code>Collections.synchronizedMap()</code> vs. <code>Hashtable</code></h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th><code>Hashtable</code></th>
+                        <th><code>synchronizedMap()</code></th>
+                        <th><code>ConcurrentHashMap</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Read locking</strong></td>
+                        <td>Full table lock</td>
+                        <td>Full table lock</td>
+                        <td><strong>None</strong> — volatile reads</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Write locking</strong></td>
+                        <td>Full table lock</td>
+                        <td>Full table lock</td>
+                        <td><strong>Per-bin</strong> — finest granularity</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Null keys/values</strong></td>
+                        <td>❌ Not allowed</td>
+                        <td>✅ Allowed</td>
+                        <td>❌ Not allowed</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Iterator fail behavior</strong></td>
+                        <td>Fail-fast (throws CME)</td>
+                        <td>Fail-fast (throws CME)</td>
+                        <td><strong>Weakly consistent</strong> — no CME</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Compound atomics</strong></td>
+                        <td>❌ Not provided</td>
+                        <td>❌ Not provided</td>
+                        <td>✅ <code>putIfAbsent</code>, <code>compute</code>, <code>merge</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Concurrent reads</strong></td>
+                        <td>Serialized (one at a time)</td>
+                        <td>Serialized</td>
+                        <td><strong>Fully parallel</strong> — all at once</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Production verdict</strong></td>
+                        <td>Legacy, never use</td>
+                        <td>Better than Hashtable, still suboptimal</td>
+                        <td><strong>Always prefer</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3><code>CopyOnWriteArrayList</code> vs. <code>Collections.synchronizedList()</code> vs. <code>Vector</code></h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th><code>Vector</code> / <code>synchronizedList</code></th>
+                        <th><code>CopyOnWriteArrayList</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Read lock cost</strong></td>
+                        <td>Lock per read</td>
+                        <td><strong>Zero</strong> — no lock</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Write cost</strong></td>
+                        <td>O(1) (for ArrayList)</td>
+                        <td><strong>O(n)</strong> — full array copy</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Iteration safety</strong></td>
+                        <td>Requires external synchronization</td>
+                        <td><strong>Always safe</strong> — immutable snapshot</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Memory overhead</strong></td>
+                        <td>None extra</td>
+                        <td>Double during write (old + new array)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Best for</strong></td>
+                        <td>Balanced read/write</td>
+                        <td><strong>Read-heavy, write-rare</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Common Pitfalls (Senior Level)</h3>
+
+            <p><strong>1. Using <code>containsKey()</code> + <code>put()</code> instead of <code>putIfAbsent()</code> / <code>computeIfAbsent()</code></strong></p>
+<pre><code>// SLIPPING CONDITION — race between check and put
+if (!map.containsKey(key)) { map.put(key, value); }
+
+// CORRECT
+map.putIfAbsent(key, value);
+// OR for computed values:
+map.computeIfAbsent(key, k -&gt; expensiveComputation(k));</code></pre>
+
+            <p><strong>2. Using <code>CopyOnWriteArrayList</code> for write-heavy workloads</strong></p>
+<pre><code>// Each add() copies the ENTIRE array — catastrophic under frequent writes
+List&lt;LogEntry&gt; accessLog = new CopyOnWriteArrayList&lt;&gt;();
+// In a high-throughput service logging 10,000 requests/sec, each add() copies the full list
+// Use ConcurrentLinkedQueue or LinkedBlockingQueue instead for append-heavy patterns</code></pre>
+
+            <p><strong>3. Assuming <code>ConcurrentHashMap</code> iteration sees all in-flight changes</strong></p>
+<pre><code>// ConcurrentHashMap's iterator is WEAKLY CONSISTENT — it may or may not reflect
+// modifications made after the iterator was created
+for (Map.Entry&lt;String, Integer&gt; entry : map.entrySet()) {
+    // Another thread calling map.put() right now may or may not appear in this iteration
+    // This is guaranteed NOT to throw ConcurrentModificationException — but completeness is not guaranteed
+}</code></pre>
+            <p>This is intentional — it's the price of lock-free reads. For a consistent snapshot, copy to a regular <code>HashMap</code>: <code>new HashMap&lt;&gt;(concurrentMap)</code> (briefly serializes the copy operation).</p>
+
+            <p><strong>4. Calling <code>Exchanger.exchange()</code> from only one thread — permanent block</strong></p>
+<pre><code>Exchanger&lt;String&gt; exchanger = new Exchanger&lt;&gt;();
+// If Thread B never arrives at exchange(), Thread A blocks here forever
+String received = exchanger.exchange("my-data");   // ← blocked indefinitely
+
+// Production safety: always use the timeout overload
+try {
+    String received = exchanger.exchange("my-data", 5, TimeUnit.SECONDS);
+} catch (TimeoutException e) {
+    // Partner thread never arrived — handle gracefully
+}</code></pre>
+
+            <p><strong>5. Expecting <code>ConcurrentHashMap.size()</code> to be exact under concurrency</strong></p>
+<pre><code>int count = map.size();   // under concurrent modifications, this is an APPROXIMATE value
+if (count &gt; 1000) { ... }  // another thread may have added/removed items between size() and this check</code></pre>
+            <p><code>size()</code> is intentionally approximate in <code>ConcurrentHashMap</code> — maintaining an exact count would require table-wide locking. Use <code>mappingCount()</code> (Java 8+) for a long value that is also approximate but less prone to overflow. If an exact count is critical, you need external synchronization or a different design.</p>
+
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: Why is <code>ConcurrentHashMap</code> preferred over <code>Hashtable</code> and <code>Collections.synchronizedMap()</code>?</strong></p>
+            <p>Both <code>Hashtable</code> and <code>Collections.synchronizedMap()</code> use a single lock on the entire map for every operation — reads and writes are serialized, meaning only one thread can access the map at a time regardless of what they're doing or which keys they're accessing. <code>ConcurrentHashMap</code> eliminates this bottleneck in two ways: (1) reads are entirely lock-free — node values are <code>volatile</code>, establishing happens-before with prior writes, so any number of threads can read simultaneously with zero synchronization overhead; (2) writes lock at the finest possible granularity — individual bins (array slots), not the whole table — so two writes to keys in different bins can proceed in parallel. Additionally, <code>ConcurrentHashMap</code> provides atomic compound methods (<code>putIfAbsent</code>, <code>computeIfAbsent</code>, <code>compute</code>, <code>merge</code>) that prevent the slipping condition race that raw <code>containsKey()</code> + <code>put()</code> creates. The only things <code>ConcurrentHashMap</code> doesn't support that <code>HashMap</code> does are null keys and null values — these are prohibited to eliminate ambiguity in concurrent contexts.</p>
+            <hr>
+
+            <p><strong>Q2: What is <code>CopyOnWriteArrayList</code> and what is its fundamental performance tradeoff?</strong></p>
+            <p><code>CopyOnWriteArrayList</code> is a thread-safe <code>List</code> implementation where every write operation (add, set, remove) creates a full copy of the backing array, makes the modification on the copy, and atomically replaces the internal array reference with the new copy. Reads never acquire any lock — they dereference the current (immutable) array reference, which is always a consistent snapshot. This produces the tradeoff: reads are extremely fast (zero lock cost, any number of concurrent readers), but writes are O(n) in both time (array copy) and memory (briefly holds old + new array simultaneously). It is appropriate when reads are overwhelmingly more frequent than writes — event listener lists, configuration registries, caches that are loaded once and read constantly. It is inappropriate for any workload with frequent writes, where the O(n) copy per write creates GC pressure and latency spikes.</p>
+            <hr>
+
+            <p><strong>Q3: What is a slipping condition in <code>ConcurrentHashMap</code>, and how do you fix it?</strong></p>
+            <p>A slipping condition occurs when a "check-then-act" compound operation — a check (<code>containsKey()</code>) followed by a write (<code>put()</code>) — is not atomic. Between the check and the write, another thread can intervene, changing the state that the check observed. In <code>ConcurrentHashMap</code>, <code>containsKey()</code> and <code>put()</code> are each individually atomic, but the two-step compound operation is not: two threads can both call <code>containsKey("key")</code>, both see <code>false</code> (key absent), both proceed to <code>put("key", value)</code>, and both execute the put — a double-insertion, with one thread's write silently overwriting the other's. The fix is to use the atomic compound methods that <code>ConcurrentMap</code> provides: <code>putIfAbsent("key", value)</code> atomically inserts only if the key is absent; <code>computeIfAbsent("key", k -&gt; value)</code> atomically computes and inserts if absent; <code>compute("key", (k, v) -&gt; newV)</code> atomically updates based on the current value. These methods execute the check-and-act as a single atomic operation at the bin level, with no window for another thread to intervene.</p>
+            <hr>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: Explain <code>ConcurrentHashMap</code>'s bin-level locking mechanism and why it is superior to segment-level locking from pre-Java 8.</strong></p>
+            <p>Segment-level locking (pre-Java 8) divided the array into a fixed number of segments (default 16), each with a <code>ReentrantLock</code>. Up to 16 threads could write in parallel if they mapped to different segments, but all keys hashing to the same segment still serialized. The segment count was fixed at construction — if your load factor was higher than the initial segment count, effective parallelism was bounded. Java 8's bin-level locking eliminates segments entirely. The lock granularity is now a single array slot (bin) — a single key's "bucket." Two writes to different keys that hash to different bins use completely different synchronized objects and have zero mutual blocking. The number of "effective locks" equals the number of occupied bins — dynamically scaling with actual data density. Additionally, writes to empty bins use CAS (compare-and-swap, a lock-free atomic CPU instruction) rather than any lock at all — the absolute minimal synchronization cost for the common case of writing to a new key.</p>
+            <hr>
+
+            <p><strong>Q5: Two threads both call <code>map.computeIfAbsent("user-123", k -&gt; loadUserFromDB(k))</code> simultaneously on a <code>ConcurrentHashMap</code>. How many times is <code>loadUserFromDB()</code> called, and what value ends up in the map?</strong></p>
+            <p>In Java 8+, <code>computeIfAbsent</code> acquires the bin lock before invoking the mapping function if the key is absent. This means only one of the two threads will find the bin in "absent" state and execute the mapping function — the second thread, when it acquires the bin lock, will find the key already present (inserted by the first thread) and return the existing value without calling the mapping function again. So <code>loadUserFromDB()</code> is called exactly <strong>once</strong>, and both threads see the same value in the map. This is the entire reason <code>computeIfAbsent</code> exists as an atomic operation — it prevents the "double computation" problem that would occur with the non-atomic <code>containsKey()</code> + <code>put()</code> pattern where both threads could each independently call <code>loadUserFromDB()</code> and potentially race to insert conflicting values.</p>
+            <hr>
+
+            <h3>Advanced</h3>
+            <p><strong>Q6: Explain why <code>ConcurrentHashMap</code>'s iteration is "weakly consistent" rather than fail-fast, what this means in practice, and describe a production scenario where this distinction matters.</strong></p>
+            <p>Fail-fast iterators (like <code>HashMap</code>'s) maintain a <code>modCount</code> and throw <code>ConcurrentModificationException</code> if the count changes during iteration — a structural modification while iterating is always an error. This requires some form of detection that there's been a modification, which in a concurrent context would require locking the table during the entire iteration. <code>ConcurrentHashMap</code> takes the opposite approach — weakly consistent iterators: the iterator may or may not reflect structural modifications made after the iterator was created, but it never throws <code>ConcurrentModificationException</code>. Each <code>next()</code> call reads nodes using the same lock-free volatile reads as <code>get()</code> — if a node was inserted after the iterator passed that bin, it might not appear; if a node was deleted after the iterator already returned it, the iteration doesn't "un-return" it. In practice this matters for cache invalidation: if you're iterating the map to find expired entries while another thread might be inserting new entries, the weakly consistent iterator guarantees you'll see all entries that existed at iterator creation, but may also see some new entries and may miss some that were deleted mid-iteration. For use cases requiring a true consistent snapshot (e.g., taking a point-in-time inventory), copy the entire map atomically: <code>new HashMap&lt;&gt;(concurrentMap)</code> — this briefly acquires all bin locks during the copy operation, producing a fully consistent snapshot at that instant.</p>
+
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <p>After internalizing these notes, you should be able to:</p>
+            <ul>
+                <li><strong>Explain</strong> <code>ConcurrentHashMap</code>'s two-tier read/write design: lock-free reads via <code>volatile</code> fields, and bin-level <code>synchronized</code> for writes — and explain why reads need no lock while writes do</li>
+                <li><strong>Identify</strong> the slipping condition race in <code>containsKey()</code> + <code>put()</code> patterns and replace them with the correct atomic alternatives (<code>putIfAbsent</code>, <code>computeIfAbsent</code>, <code>compute</code>, <code>merge</code>)</li>
+                <li><strong>Explain</strong> why <code>ConcurrentHashMap</code> prohibits null keys/values and what ambiguity null would create in a concurrent context</li>
+                <li><strong>Explain</strong> <code>CopyOnWriteArrayList</code>'s copy-on-write mechanism — the volatile reference swap, why readers see an immutable snapshot, and why iteration is always safe without external synchronization</li>
+                <li><strong>Choose</strong> between <code>CopyOnWriteArrayList</code> and <code>Collections.synchronizedList()</code> correctly based on read-to-write ratio, and identify when <code>CopyOnWriteArrayList</code> is inappropriate (write-heavy workloads)</li>
+                <li><strong>Implement</strong> <code>Exchanger</code> for exactly-two-thread data exchange, use the timeout overload in production, and explain why it blocks indefinitely if only one thread calls <code>exchange()</code></li>
+                <li><strong>Compare</strong> <code>ConcurrentHashMap</code> vs <code>synchronizedMap</code> vs <code>Hashtable</code> across read locking, write locking, compound atomics, and iterator behavior — and always choose <code>ConcurrentHashMap</code></li>
+                <li><strong>Explain</strong> "weakly consistent" iteration in <code>ConcurrentHashMap</code> — why it exists, what guarantees it provides (no CME, may or may not reflect concurrent modifications), and how to take a fully consistent snapshot when needed</li>
+                <li><strong>Implement</strong> the double-buffer exchange pattern with <code>Exchanger</code> to allow a producer and consumer to work on separate buffers simultaneously without any item copying</li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
