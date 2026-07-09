@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: Concurrency Case Studies</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            color: var(--heading-color);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Title & Purpose</a></li>
+            <li><a href="#dining-philosophers">1. Dining Philosophers</a></li>
+            <li><a href="#student-library">2. Student Library</a></li>
+            <li><a href="#comparison">3. Side-by-Side Comparison</a></li>
+            <li><a href="#deep-dive">4. Deep Dive</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Multithreading: Concurrency Case Studies</h1>
+                <h2 style="margin-top: -10px; margin-bottom: 0.5rem;">Dining Philosophers & Student Library Simulation</h2>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: 0; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                
+                <p><strong>Syllabus Coverage: Lectures 64–75</strong> (Dining Philosophers I–VI · Student Library I–VI)</p>
+                
+                <div class="highlight-box">
+                    <p><strong>Purpose of this section:</strong> These are synthesis case studies — not new APIs. Every mechanism used here (<code>ReentrantLock</code>, <code>tryLock</code>, <code>ExecutorService</code>, <code>volatile</code>, thread lifecycle) was introduced in prior sections. The goal is to see those tools compose into a working, non-trivial concurrent system and to understand the engineering decisions made at each step.</p>
+                </div>
+                <hr>
+            </div>
+
+            <h2 id="dining-philosophers">1. The Dining Philosophers Problem</h2>
+            
+            <h3>1.1 Problem Statement</h3>
+            <p>Five philosophers sit around a circular table. Between every adjacent pair of philosophers lies a single chopstick — so there are five chopsticks in total. Each philosopher alternates between <strong>thinking</strong> (not needing any chopstick) and <strong>eating</strong> (requiring <em>both</em> the chopstick to their left and the chopstick to their right simultaneously). A chopstick can be held by only one philosopher at a time.</p>
+            
+            <p>The engineering challenge: design a multi-threaded system where:</p>
+            <ol>
+                <li>No two philosophers hold the same chopstick at the same time (mutual exclusion)</li>
+                <li>No philosopher starves — every philosopher eventually gets to eat (no starvation)</li>
+                <li>The application never deadlocks (no permanent halt)</li>
+            </ol>
+
+<pre><code>          P0
+        /    \
+      C4      C0
+      /          \
+    P4            P1
+     |            |
+    C3            C1
+      \          /
+       P3 --- P2
+          C2</code></pre>
+
+            <p><strong>Why deadlock is easy to trigger:</strong> if all five philosophers simultaneously pick up their <em>left</em> chopstick, each holds one chopstick and waits forever for the one chopstick to their right — which is held by the philosopher to their right who is also waiting. A perfect circular wait — the third Coffman condition — is immediately established.</p>
+
+            <h3>1.2 Architecture Overview</h3>
+<pre><code>Constants      — static final configuration (5 philosophers, 5 chopsticks, 5s runtime)
+State (enum)   — LEFT or RIGHT — identifies which hand is holding a given chopstick
+Chopstick      — a ReentrantLock + an ID; the shared resource competitors race for
+Philosopher    — implements Runnable; loops think → tryPickUp(left) → tryPickUp(right) → eat
+Application    — creates ExecutorService, wires chopsticks to philosophers in circular order</code></pre>
+
+            <h3>1.3 Class-by-Class Implementation</h3>
+
+            <h4><code>Constants</code> — Non-Instantiable Configuration Class</h4>
+<pre><code>public final class Constants {
+    private Constants() {}   // private constructor — prevents instantiation
+
+    public static final int NUMBER_OF_PHILOSOPHERS  = 5;
+    public static final int NUMBER_OF_CHOPSTICKS    = 5;
+    public static final int SIMULATION_TIME_MS      = 5_000;   // run for 5 seconds
+}</code></pre>
+            <p><code>private</code> constructor is the standard Java pattern for a pure constants class. Since you can't instantiate it, there's no risk of someone accidentally creating an instance and treating it as state-bearing.</p>
+
+            <h4><code>State</code> — Enum for Chopstick Position</h4>
+<pre><code>public enum State {
+    LEFT, RIGHT
+}</code></pre>
+            <p>Passed to <code>pickUp()</code> and <code>putDown()</code> purely for logging clarity — so the output reads "Philosopher 0 picked up LEFT chopstick 0" rather than an opaque boolean.</p>
+
+            <h4><code>Chopstick</code> — The Shared Resource</h4>
+<pre><code>import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class Chopstick {
+    private final int id;
+    private final Lock lock;
+
+    public Chopstick(int id) {
+        this.id = id;
+        this.lock = new ReentrantLock();   // fairness not set — not critical for this simulation
+    }
+
+    /**
+     * Philosopher attempts to pick up this chopstick.
+     * Uses tryLock(10ms) — the critical deadlock-prevention decision.
+     */
+    public boolean pickUp(Philosopher philosopher, State state) throws InterruptedException {
+        if (lock.tryLock(10, TimeUnit.MILLISECONDS)) {
+            System.out.printf("%s picked up %s %s%n", philosopher, state, this);
+            return true;    // successfully acquired
+        }
+        return false;       // couldn't acquire in 10ms — caller will try again later
+    }
+
+    public void putDown(Philosopher philosopher, State state) {
+        lock.unlock();
+        System.out.printf("%s put down %s %s%n", philosopher, state, this);
+    }
+
+    @Override
+    public String toString() { return "Chopstick-" + id; }
+}</code></pre>
+
+            <p><strong>The single most important design decision in the entire problem: <code>tryLock(10ms)</code> instead of <code>lock()</code>.</strong></p>
+
+<pre><code>// DEADLOCK VERSION (for educational comparison):
+lock.lock();   // blocks indefinitely — if all 5 philosophers call this simultaneously on their
+               // left chopstick, all 5 hold their left lock and wait FOREVER for their right lock
+               // → classic circular wait → permanent deadlock
+
+// DEADLOCK-SAFE VERSION (what we use):
+lock.tryLock(10, TimeUnit.MILLISECONDS)
+// If the lock isn't available within 10ms, returns false
+// The philosopher releases any chopstick it already holds and tries again later
+// This breaks the "hold and wait" Coffman condition — preventing deadlock</code></pre>
+
+            <h4><code>Philosopher</code> — The Thread</h4>
+<pre><code>import java.util.Random;
+
+public class Philosopher implements Runnable {
+    private final int id;
+    private final Chopstick leftChopstick;
+    private final Chopstick rightChopstick;
+    private final Random random = new Random();
+    private volatile boolean isFull = false;   // volatile — written by main, read by this thread
+    private int eatingCounter = 0;
+
+    public Philosopher(int id, Chopstick left, Chopstick right) {
+        this.id = id;
+        this.leftChopstick  = left;
+        this.rightChopstick = right;
+    }
+
+    @Override
+    public void run() {
+        try {
+            while (!isFull) {       // loop until externally told to stop
+                think();
+
+                // Try to acquire LEFT chopstick first
+                if (leftChopstick.pickUp(this, State.LEFT)) {
+
+                    // Try to acquire RIGHT chopstick second
+                    if (rightChopstick.pickUp(this, State.RIGHT)) {
+                        eat();
+                        rightChopstick.putDown(this, State.RIGHT);   // release RIGHT first
+                    }
+                    // Whether or not we got the right chopstick, always release left
+                    leftChopstick.putDown(this, State.LEFT);
+                }
+                // If pickUp returned false: do nothing — loop back to think() and try again
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private void think() throws InterruptedException {
+        System.out.printf("%s is thinking%n", this);
+        Thread.sleep(random.nextInt(1000));   // think for 0–1000ms
+    }
+
+    private void eat() throws InterruptedException {
+        System.out.printf("%s is eating%n", this);
+        eatingCounter++;
+        Thread.sleep(random.nextInt(1000));   // eat for 0–1000ms
+    }
+
+    public void setFull(boolean full) { this.isFull = full; }
+    public int getEatingCounter() { return eatingCounter; }
+
+    @Override
+    public String toString() { return "Philosopher-" + id; }
+}</code></pre>
+
+            <p><strong>Why <code>volatile boolean isFull</code>:</strong> <code>isFull</code> is written by the main thread and read repeatedly by the philosopher's own thread in the <code>while(!isFull)</code> loop condition. Without <code>volatile</code>, the JIT compiler is permitted to cache the value in a CPU register — the philosopher thread would never see the update from the main thread and would loop forever. <code>volatile</code> guarantees every read goes to main memory (consistent with the stopping-a-thread pattern from the visibility/atomicity section).</p>
+
+            <p><strong>The nested <code>if</code> pattern:</strong></p>
+<pre><code>if (left.pickUp()) {          // got left chopstick
+    if (right.pickUp()) {     // got right chopstick
+        eat();
+        right.putDown();      // release in REVERSE order: right first
+    }
+    left.putDown();           // ALWAYS release left if we picked it up
+}</code></pre>
+
+            <p>If <code>right.pickUp()</code> returns <code>false</code>, the philosopher cleanly releases <code>left</code> and retries. This is the key: a philosopher <strong>never holds one chopstick while blocking indefinitely for the other</strong> — the <code>tryLock(10ms)</code> timeout ensures that if the right chopstick isn't available quickly, the philosopher backs off completely rather than sitting with one chopstick held.</p>
+
+            <h4><code>Application</code> — Wiring It Together</h4>
+<pre><code>import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class Application {
+    public static void main(String[] args) throws InterruptedException {
+        Philosopher[] philosophers = null;
+        ExecutorService executor = null;
+
+        try {
+            // Create chopsticks
+            Chopstick[] chopsticks = new Chopstick[Constants.NUMBER_OF_CHOPSTICKS];
+            for (int i = 0; i &lt; Constants.NUMBER_OF_CHOPSTICKS; i++) {
+                chopsticks[i] = new Chopstick(i);
+            }
+
+            // Create philosophers — the modulo operator handles the circular assignment
+            philosophers = new Philosopher[Constants.NUMBER_OF_PHILOSOPHERS];
+            for (int i = 0; i &lt; Constants.NUMBER_OF_PHILOSOPHERS; i++) {
+                philosophers[i] = new Philosopher(
+                    i,
+                    chopsticks[i],                                         // left
+                    chopsticks[(i + 1) % Constants.NUMBER_OF_PHILOSOPHERS] // right (circular)
+                );
+            }
+
+            // Start all philosopher threads
+            executor = Executors.newFixedThreadPool(Constants.NUMBER_OF_PHILOSOPHERS);
+            for (Philosopher p : philosophers) {
+                executor.execute(p);
+            }
+
+            // Run simulation for SIMULATION_TIME_MS
+            Thread.sleep(Constants.SIMULATION_TIME_MS);
+
+        } finally {
+            // Signal all philosophers to stop after their current iteration
+            if (philosophers != null) {
+                for (Philosopher p : philosophers) p.setFull(true);
+            }
+            if (executor != null) {
+                executor.shutdown();
+                while (!executor.isTerminated()) {
+                    Thread.sleep(1000);
+                }
+            }
+        }
+
+        // Print results
+        for (Philosopher p : philosophers) {
+            System.out.printf("%s ate %d times%n", p, p.getEatingCounter());
+        }
+    }
+}</code></pre>
+
+            <p><strong>The modulo operator — why it's essential:</strong></p>
+<pre><code>i = 0: left = chopstick[0],  right = chopstick[(0+1) % 5] = chopstick[1]
+i = 1: left = chopstick[1],  right = chopstick[(1+1) % 5] = chopstick[2]
+i = 2: left = chopstick[2],  right = chopstick[(2+1) % 5] = chopstick[3]
+i = 3: left = chopstick[3],  right = chopstick[(3+1) % 5] = chopstick[4]
+i = 4: left = chopstick[4],  right = chopstick[(4+1) % 5] = chopstick[0]  ← wraps around!</code></pre>
+            <p>Without <code>% NUMBER_OF_PHILOSOPHERS</code>, <code>chopsticks[5]</code> would throw <code>ArrayIndexOutOfBoundsException</code>. The modulo produces a circular mapping — the last philosopher's right chopstick is the same object as the first philosopher's left chopstick, which is exactly the problem statement.</p>
+
+            <h3>1.4 Deadlock Demo vs. Deadlock-Safe Version</h3>
+            <p>Running the application with <code>lock()</code> instead of <code>tryLock(10ms)</code> produces:</p>
+<pre><code>Philosopher-0 picked up LEFT Chopstick-0
+Philosopher-1 picked up LEFT Chopstick-1
+Philosopher-2 picked up LEFT Chopstick-2
+Philosopher-3 picked up LEFT Chopstick-3
+Philosopher-4 picked up LEFT Chopstick-4
+[application hangs forever — all 5 philosophers hold their left chopstick
+ and wait indefinitely for their right, which is someone else's left]</code></pre>
+
+            <p>Running with <code>tryLock(10ms)</code>:</p>
+<pre><code>[simulation runs for 5 seconds, output shows philosophers eating]
+Philosopher-0 ate 3 times
+Philosopher-1 ate 5 times
+Philosopher-2 ate 1 time
+Philosopher-3 ate 5 times
+Philosopher-4 ate 4 times</code></pre>
+            <p>Not perfectly equal — some philosophers eat more than others — but crucially: no philosopher ate zero times (no starvation), and no deadlock occurred. The <code>tryLock</code> timeout breaks the circular wait whenever it forms.</p>
+
+            <hr>
+
+            <h2 id="student-library">2. The Student Library Problem</h2>
+            
+            <h3>2.1 Problem Statement</h3>
+            <p>A library has <strong>7 books</strong> and <strong>5 students</strong>. Students independently and repeatedly choose a random book and try to read it. The constraints:</p>
+            <ol>
+                <li>No two students may read the same book simultaneously (mutual exclusion per book)</li>
+                <li>No student should wait indefinitely for a book (no starvation)</li>
+                <li>Students that can't get their chosen book should be able to move on and try again (no deadlock)</li>
+            </ol>
+            <p>This is a simpler problem than Dining Philosophers (no circular dependency, since each student only needs one resource at a time), but it reinforces the same <code>ReentrantLock</code> / <code>tryLock</code> pattern in a more relatable domain.</p>
+
+            <h3>2.2 Architecture Overview</h3>
+<pre><code>Constants   — static final configuration (5 students, 7 books)
+Book        — a ReentrantLock + ID; one lock per book instance
+Student     — implements Runnable; loops: generate random book ID → book.read(this)
+Application — creates arrays of books and students, ExecutorService wires them together</code></pre>
+
+            <h3>2.3 Class-by-Class Implementation</h3>
+
+            <h4><code>Constants</code></h4>
+<pre><code>public final class Constants {
+    private Constants() {}
+
+    public static final int NUMBER_OF_STUDENTS = 5;
+    public static final int NUMBER_OF_BOOKS    = 7;
+}</code></pre>
+
+            <h4><code>Book</code> — The Shared Resource (One Lock Per Book)</h4>
+<pre><code>import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class Book {
+    private final int id;
+    private final Lock lock;
+
+    public Book(int id) {
+        this.id = id;
+        this.lock = new ReentrantLock();
+    }
+
+    /**
+     * A student attempts to read this book.
+     * The tryLock variant prevents indefinite blocking if the book is occupied.
+     */
+    public void read(Student student) throws InterruptedException {
+
+        // OPTION A — tryLock(timeout): non-blocking with fallback
+        if (lock.tryLock(10, TimeUnit.MINUTES)) {
+            try {
+                System.out.printf("%s starts reading %s%n", student, this);
+                Thread.sleep(2000);   // simulate 2 seconds of reading
+                System.out.printf("%s finished reading %s%n", student, this);
+            } finally {
+                lock.unlock();   // always in finally — even if sleep() throws InterruptedException
+            }
+        }
+        // If tryLock returns false: student simply does nothing for this attempt
+        // — the while(true) in Student.run() will generate a new random book ID and try again
+
+        // OPTION B — lock() (blocking): guarantees the student WILL read this exact book,
+        // but risks starvation if one book is always in demand. For the library problem,
+        // Option A is preferred: "if the book is busy, pick a different one"
+    }
+
+    @Override
+    public String toString() { return "Book-" + id; }
+}</code></pre>
+
+            <p><strong>The crucial <code>try/finally</code> around <code>unlock()</code>:</strong></p>
+<pre><code>// WRONG — if Thread.sleep() throws InterruptedException, unlock() is skipped
+// The book's lock is held forever — every student waiting for it blocks permanently
+if (lock.tryLock(...)) {
+    doReading();   // may throw
+    lock.unlock(); // ← skipped if above throws
+}
+
+// CORRECT — finally guarantees unlock regardless of exception
+if (lock.tryLock(...)) {
+    try {
+        doReading();
+    } finally {
+        lock.unlock();  // ← always runs
+    }
+}</code></pre>
+
+            <h4><code>Student</code> — The Thread</h4>
+<pre><code>import java.util.Random;
+
+public class Student implements Runnable {
+    private final int id;
+    private final Book[] books;
+    private final Random random = new Random();
+
+    public Student(int id, Book[] books) {
+        this.id = id;
+        this.books = books;
+    }
+
+    @Override
+    public void run() {
+        while (true) {
+            // Pick a random book
+            int bookId = random.nextInt(Constants.NUMBER_OF_BOOKS);
+            try {
+                books[bookId].read(this);  // attempt to read — may be blocked or fall through
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;   // clean exit when executor shuts down
+            }
+        }
+    }
+
+    @Override
+    public String toString() { return "Student#" + id; }
+}</code></pre>
+            <p>The <code>while(true)</code> with a random book selection models real student behavior: if your first choice is occupied, you pick up a different book rather than waiting indefinitely. The <code>InterruptedException</code> catch with <code>return</code> is the graceful shutdown hook — when the <code>ExecutorService</code> calls <code>shutdown()</code> and eventually interrupts the threads, each student exits cleanly.</p>
+
+            <h4><code>Application</code> — Wiring It Together</h4>
+<pre><code>import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class Application {
+    public static void main(String[] args) {
+        Book[] books     = null;
+        Student[] students = null;
+        ExecutorService executor = null;
+
+        try {
+            books = new Book[Constants.NUMBER_OF_BOOKS];
+            for (int i = 0; i &lt; Constants.NUMBER_OF_BOOKS; i++) {
+                books[i] = new Book(i + 1);   // IDs start at 1 for readability
+            }
+
+            students = new Student[Constants.NUMBER_OF_STUDENTS];
+            executor = Executors.newFixedThreadPool(Constants.NUMBER_OF_STUDENTS);
+
+            for (int i = 0; i &lt; Constants.NUMBER_OF_STUDENTS; i++) {
+                students[i] = new Student(i + 1, books);   // pass the entire books array
+                executor.execute(students[i]);
+            }
+
+            // Let simulation run (no explicit time limit — stop manually, or add a sleep + shutdown)
+        } finally {
+            if (executor != null) executor.shutdown();
+        }
+    }
+}</code></pre>
+
+            <hr>
+
+            <h2 id="comparison">3. Side-by-Side Comparison of Both Problems</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Dimension</th>
+                        <th>Dining Philosophers</th>
+                        <th>Student Library</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Resources per actor</strong></td>
+                        <td>2 (left + right chopstick)</td>
+                        <td>1 (one book at a time)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Deadlock risk</strong></td>
+                        <td>High — circular wait naturally forms when all pick up their left lock</td>
+                        <td>Low — only one lock needed, no circular dependency possible</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Starvation risk</strong></td>
+                        <td>Present — a philosopher could repeatedly lose the race for both chopsticks</td>
+                        <td>Present — a popular book could always be occupied when a student tries</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Lock per resource</strong></td>
+                        <td><code>ReentrantLock</code> per chopstick</td>
+                        <td><code>ReentrantLock</code> per book</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Acquisition strategy</strong></td>
+                        <td><code>tryLock(10ms)</code> — brief timeout, then release ALL held locks and retry</td>
+                        <td><code>tryLock(10min)</code> in <code>if</code> block — if unavailable, skip and choose random alternative</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Thread stop mechanism</strong></td>
+                        <td><code>volatile boolean isFull</code> checked in <code>while(!isFull)</code></td>
+                        <td><code>InterruptedException</code> catch + <code>return</code> from <code>while(true)</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Stopping mechanism</strong></td>
+                        <td>External: main thread sets <code>philosopher.setFull(true)</code></td>
+                        <td>External: <code>executor.shutdown()</code> + thread interrupt</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Key Coffman condition broken</strong></td>
+                        <td>"No preemption" + "hold and wait" — <code>tryLock</code> with fallback</td>
+                        <td>"Hold and wait" — student never holds one lock while trying for another</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Real-world analog</strong></td>
+                        <td>Any system where threads need two mutually exclusive resources simultaneously</td>
+                        <td>Connection pool, file access, seat reservation</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <hr>
+
+            <h2 id="deep-dive">4. Deep Dive: What These Problems Teach</h2>
+
+            <h3>Why <code>tryLock</code> Is the Correct Tool for Multi-Resource Acquisition</h3>
+            <p>In the Dining Philosophers problem, the naive <code>lock()</code> approach establishes a circular dependency in the exact scenario it was meant to prevent. The insight: <strong>once you hold a lock and then attempt to acquire a second lock, you are in the "hold and wait" danger zone.</strong> Every multi-resource acquisition must use a timeout-based strategy.</p>
+            <p>The production generalization: any time you need to acquire two or more locks simultaneously, prefer <code>tryLock()</code> with a timeout and an explicit "if I can't get all of them, release what I have and retry later" policy. This directly implements the "break hold-and-wait" Coffman condition solution from the deadlock theory section.</p>
+
+            <h3>The <code>try/finally</code> Pattern Is Non-Negotiable</h3>
+            <p>Both simulations use <code>lock.unlock()</code> in a <code>finally</code> block. The consequences of not doing so in a real system are severe:</p>
+
+<pre><code>// Philosopher puts down chopstick correctly — always:
+try { eat(); }
+finally {
+    rightChopstick.putDown(this, State.RIGHT);
+    leftChopstick.putDown(this, State.LEFT);
+}
+
+// Book is always unlocked — even if Thread.sleep() throws:
+if (lock.tryLock(...)) {
+    try { Thread.sleep(2000); }
+    finally { lock.unlock(); }
+}</code></pre>
+
+            <p>If <code>Thread.sleep()</code> throws <code>InterruptedException</code> and the lock isn't in a <code>finally</code> block, the lock is held permanently. Every subsequent thread trying to acquire it blocks forever — an invisible, uncommunicative resource leak.</p>
+
+            <h3>Two Thread-Stop Patterns — Choose by Context</h3>
+            <p>The Dining Philosophers and Student Library simulations use different thread-stopping patterns, and both are correct for their context:</p>
+
+            <p><strong>Pattern 1: <code>volatile</code> flag + cooperative <code>while</code> loop (Dining Philosophers)</strong></p>
+<pre><code>private volatile boolean isFull = false;
+public void run() {
+    while (!isFull) { think(); tryEat(); }
+}
+public void setFull(boolean full) { this.isFull = full; }
+// Main thread: philosopher.setFull(true);</code></pre>
+            <p>Best for: long-running threads with a clearly defined "finish state," where the thread should complete its current iteration before stopping. The thread stops at a natural boundary.</p>
+
+            <p><strong>Pattern 2: <code>InterruptedException</code> catch + <code>return</code> (Student Library)</strong></p>
+<pre><code>public void run() {
+    while (true) {
+        try { books[randomId].read(this); }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;   // exits cleanly on interrupt
+        }
+    }
+}
+// Main thread: executor.shutdown(); (eventually calls interrupt() on threads)</code></pre>
+            <p>Best for: threads used with an <code>ExecutorService</code> where the executor manages the lifecycle. The thread's <code>run()</code> method is interrupted by <code>shutdownNow()</code> and handles this gracefully. This is the correct pattern when you don't hold direct references to threads (as is typical with executor services).</p>
+
+            <h3>The <code>volatile</code> Flag Must Be <code>volatile</code></h3>
+            <p>In the Dining Philosophers problem, <code>isFull</code> is written by the main thread and read in the <code>while(!isFull)</code> loop by the philosopher's own thread. Without <code>volatile</code>, the JIT compiler can legally cache <code>isFull</code> in a CPU register after the first read (since nothing in the philosopher's thread modifies it) — the <code>while</code> loop never re-reads from main memory and runs forever, ignoring the main thread's <code>setFull(true)</code> call. <code>volatile</code> forces a main-memory read on every loop iteration.</p>
+
+            <h3>Resource Count Affects Deadlock Probability</h3>
+            <ul>
+                <li><strong>Dining Philosophers:</strong> 5 philosophers, 5 chopsticks — at most 2 can eat simultaneously (each requires 2 chopsticks; &lfloor;5/2&rfloor; = 2). Competition is guaranteed.</li>
+                <li><strong>Student Library:</strong> 5 students, 7 books — in theory all 5 students could be reading simultaneously (5 &lt; 7). Contention only occurs when students happen to choose the same book randomly. Increasing <code>NUMBER_OF_BOOKS</code> reduces contention; decreasing it (below <code>NUMBER_OF_STUDENTS</code>) makes contention certain.</li>
+            </ul>
+            <p>This illustrates a general principle: <strong>resource scarcity is the root cause of contention</strong>. In system design, increasing the resource pool (more DB connections, larger thread pool, more file handles) often reduces contention without any synchronization changes — the right answer is sometimes "add more of the thing."</p>
+
+            <hr>
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: What is the Dining Philosophers problem and why does it demonstrate deadlock risk?</strong></p>
+            <p>Five philosophers sit at a circular table, each needing their left AND right chopstick simultaneously to eat. There are exactly five chopsticks — one between each adjacent pair. If every philosopher simultaneously picks up their left chopstick, each holds one chopstick and waits forever for their right, which is held by their neighbor who is also waiting. This creates a circular wait — all five Coffman conditions for deadlock are met: mutual exclusion (one philosopher per chopstick), hold-and-wait (holding left while waiting for right), no preemption (can't forcibly take a chopstick), and circular wait (everyone waiting for their neighbor). The problem is a classic model for any concurrent system where threads need multiple shared resources simultaneously.</p>
+            <hr>
+
+            <p><strong>Q2: How does <code>tryLock(timeout)</code> prevent deadlock in the Dining Philosophers implementation?</strong></p>
+            <p><code>lock()</code> blocks a thread indefinitely until the lock is available — if every philosopher calls <code>lock()</code> on their left chopstick simultaneously, all five block waiting for their right chopstick forever. <code>tryLock(10ms)</code> returns <code>false</code> if the lock isn't available within 10 milliseconds instead of blocking. In the philosopher's code, if <code>rightChopstick.pickUp()</code> returns <code>false</code>, the philosopher immediately calls <code>leftChopstick.putDown()</code> — releasing the one chopstick it holds — and loops back to <code>think()</code>. This breaks the "hold-and-wait" Coffman condition: a philosopher never holds one chopstick while blocking indefinitely for the other. Eventually, the timing desynchronizes and one philosopher successfully acquires both chopsticks, eats, and releases them.</p>
+            <hr>
+
+            <p><strong>Q3: Why is the modulo operator necessary when assigning chopsticks to philosophers?</strong></p>
+            <p>The philosophers and chopsticks are stored in zero-indexed arrays. For philosopher <code>i</code>, the left chopstick is <code>chopsticks[i]</code> and the right is <code>chopsticks[i+1]</code>. This works for philosophers 0–3, but for philosopher 4 (the last), <code>chopsticks[4+1]</code> would be <code>chopsticks[5]</code> — an <code>ArrayIndexOutOfBoundsException</code>, since the array only has indices 0–4. The modulo operator <code>(i+1) % NUMBER_OF_PHILOSOPHERS</code> wraps 5 back to 0, making philosopher 4's right chopstick <code>chopsticks[0]</code> — the same object as philosopher 0's left chopstick. This is the circular structure the problem requires: the last and first philosophers share a chopstick.</p>
+            <hr>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: In the Student Library problem, why is <code>lock.unlock()</code> placed in a <code>finally</code> block rather than at the end of the <code>if</code> block?</strong></p>
+            <p><code>Thread.sleep(2000)</code> inside the reading block can throw <code>InterruptedException</code> — either from the executor calling <code>shutdown()</code> or from an explicit <code>interrupt()</code>. If <code>unlock()</code> is placed sequentially after <code>sleep()</code> (not in <code>finally</code>), an <code>InterruptedException</code> causes the method to exit via exception before reaching <code>unlock()</code>, leaving the book's lock permanently held. Every student that subsequently tries to read that book will block indefinitely — a silent resource leak. <code>finally</code> guarantees <code>unlock()</code> executes regardless of whether the <code>try</code> block completes normally or via any exception. This is exactly the same reason <code>ReentrantLock.unlock()</code> must always be in <code>finally</code>, established in the ReentrantLock section.</p>
+            <hr>
+
+            <p><strong>Q5: The Dining Philosophers problem uses <code>volatile boolean isFull</code> to stop threads, while the Student Library uses <code>InterruptedException</code> catch with <code>return</code>. Why are these different patterns used for the same purpose?</strong></p>
+            <p>The Dining Philosophers problem creates threads via <code>executor.execute()</code> but stores direct <code>Philosopher</code> references. The main thread can call <code>philosopher.setFull(true)</code> directly on each object — the philosopher's <code>while(!isFull)</code> loop checks this flag at the start of each iteration and stops cooperatively at a natural boundary (after completing think→eat→putDown). <code>volatile</code> is essential because <code>isFull</code> is written by one thread (main) and read by another (the philosopher's thread). The Student Library, by contrast, doesn't maintain direct student references after submission — it relies entirely on the executor's lifecycle management. <code>executor.shutdown()</code> eventually results in thread interruption via <code>shutdownNow()</code>, which causes <code>Thread.sleep()</code> (inside <code>book.read()</code>) to throw <code>InterruptedException</code>. The student catches this, restores the interrupt flag, and returns. The pragmatic rule: use the <code>volatile</code> flag pattern when you hold thread/object references and want cooperative stop at a logical boundary; use interrupt-based stop when using an executor service and want the framework to manage lifecycle.</p>
+            <hr>
+
+            <h3>Advanced</h3>
+            <p><strong>Q6: The Dining Philosophers implementation uses <code>tryLock(10ms)</code>. What specific failure mode does this introduce that <code>lock()</code> does not, and how would you mitigate it in a production system?</strong></p>
+            <p><code>tryLock(10ms)</code> introduces the risk of <strong>livelock</strong> — the same failure mode discussed in the deadlock/livelock section. If two philosophers repeatedly try for their chopsticks at nearly the same interval (say, both retrying every ~10ms + random think time), they can collide in a synchronized pattern: philosopher A picks up chopstick 0, philosopher B picks up chopstick 1, both try their second chopstick, both fail, both release, both think, both retry — potentially cycling indefinitely. In the simulation, random <code>Thread.sleep()</code> durations (0–1000ms) for thinking and eating provide natural jitter that prevents this lock-step rhythm from persisting — the two threads' timing drifts apart naturally over a few iterations. In a production system where timing is more deterministic, you would additionally introduce <strong>explicit random backoff</strong>: after a failed <code>tryLock()</code>, sleep for a random duration (<code>ThreadLocalRandom.current().nextInt(5, 50)</code> ms) before retrying. This is the same random-jitter solution from the deadlock/livelock notes — it desynchronizes competing threads probabilistically, reducing the window where they collide indefinitely.</p>
+
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <p>After internalizing these notes, you should be able to:</p>
+            <ul>
+                <li><strong>Explain</strong> the Dining Philosophers problem from first principles: the circular resource dependency, why all-five-pick-up-left creates a deadlock, and which Coffman condition this violates</li>
+                <li><strong>Implement</strong> the <code>Chopstick</code> class with <code>ReentrantLock</code> and <code>tryLock(timeout)</code>, and articulate exactly why <code>lock()</code> causes deadlock while <code>tryLock</code> prevents it</li>
+                <li><strong>Trace</strong> the philosopher's nested-if flow: pick up left → try pick up right → eat → put down right → put down left — and explain why the else branch (right failed) must still put down the left</li>
+                <li><strong>Apply</strong> the modulo operator to produce a circular chopstick assignment and explain the <code>ArrayIndexOutOfBoundsException</code> it prevents</li>
+                <li><strong>Use</strong> <code>volatile boolean</code> for cooperative thread stopping when direct object references are available, and <code>InterruptedException</code> + <code>return</code> for stopping threads managed by an <code>ExecutorService</code></li>
+                <li><strong>Implement</strong> the Student Library problem: <code>Book</code> as a <code>ReentrantLock</code>, <code>Student</code> as a <code>Runnable</code> with random book selection, and <code>Application</code> wiring them via a <code>FixedThreadPool</code></li>
+                <li><strong>Explain</strong> why <code>lock.unlock()</code> must be in a <code>finally</code> block and what permanent failure occurs (resource leak + permanent block on all waiting threads) if an exception bypasses it</li>
+                <li><strong>Compare</strong> both simulations across: resources per actor, deadlock risk, starvation risk, thread-stop pattern, and Coffman condition broken — and articulate why different design choices were made</li>
+                <li><strong>Identify</strong> the livelock risk that <code>tryLock</code> introduces and explain why random <code>think()/eat()</code> durations provide natural jitter that mitigates it in the simulation</li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
