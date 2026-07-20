@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parallelization & Amdahl's Law</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            color: var(--heading-color);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Context & Scope</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Code</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Multithreading: Parallelization Deep Dive</h1>
+                <h2 style="margin-top: -10px; margin-bottom: 0.5rem;">Divide-and-Conquer (Merge Sort), Reduction (Sum), and Amdahl's Law</h2>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: 0; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                
+                <p><strong>Course position:</strong> <em>Parallelization</em> section — covers: Sequential Merge Sort (theory + implementation + stack visualization) → Parallel Merge Sort → Running Time Comparison → Sum Problem (sequential + parallel) → Running Time Comparison → Amdahl's Law.</p>
+                <p><strong>Already known (assumed):</strong> Thread/Runnable basics, join(), daemon vs user threads, synchronized, wait/notify, Locks/ReentrantLock, deadlock/livelock, volatile, atomic variables, semaphores/mutexes, thread pools/Executors, Callable/Future, Collections synchronization, CountDownLatch, CyclicBarrier, BlockingQueue variants, ConcurrentHashMap, Exchanger, CopyOnWriteArrayList, dining philosophers/student library exercises.</p>
+                <p><strong>Not yet covered (deliberately not front-loaded here):</strong> Fork-Join framework (<code>RecursiveAction</code>/<code>RecursiveTask</code>), Stream API parallelism, virtual threads, <code>CompletableFuture</code>, structured concurrency. Where relevant I'll flag "this gets formalized later" rather than explain it now — the naive <code>Thread</code>-per-chunk approach you saw in this lecture is exactly the pain point Fork-Join was built to solve.</p>
+                
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            
+            <div class="highlight-box">
+                <p><strong>One-Sentence Definition:</strong><br>
+                Data-parallelism is the technique of partitioning an independent, divisible computation (sorting, summation) across N worker threads mapped roughly to N CPU cores, executing the partitions concurrently, then performing a strictly sequential combination step — with the achievable speedup mathematically capped by however much of the algorithm <em>cannot</em> be parallelized (Amdahl's Law).</p>
+            </div>
+
+            <h3>The Architecture Analogy</h3>
+            <p>Think of a tax-processing office. You can hire 16 clerks (cores) and give each a stack of 1/16th of the forms (chunking) — that part scales beautifully. But at the end, one supervisor still has to walk through all 16 completed stacks <em>in order</em> to file the final consolidated report (the sequential merge/reduce step). No matter how many clerks you hire, that supervisor's walk-through time is a hard floor on how fast the whole office can finish. Amdahl's Law is just the formula for "how much does hiring more clerks actually help, given that fixed supervisor bottleneck."</p>
+
+            <h3>How the JVM Sees It</h3>
+            <ul>
+                <li>Each <code>new Thread(...).start()</code> call causes the JVM to request a <strong>native OS thread</strong> (1:1 mapping on the platform-thread model you've been using so far) — the OS scheduler, not the JVM, actually distributes these across physical cores.</li>
+                <li><code>Runtime.getRuntime().availableProcessors()</code> doesn't ask the JVM — it queries the OS/container cgroup for the number of logical cores visible to the process. This is why the number can lie in containerized environments (a container capped at 2 CPUs on a 64-core host may still report 64 unless cgroup-aware JVM flags are set).</li>
+                <li><code>thread.join()</code> under the hood parks the calling thread (removing it from the OS run queue) and relies on the JMM's <strong>happens-before</strong> guarantee: everything the joined thread did before terminating is visible to the joining thread after <code>join()</code> returns — no extra <code>volatile</code>/synchronization needed for the merge step to safely read the sorted sub-arrays.</li>
+                <li>Recursive calls (<code>sort(low, middle)</code>, <code>sort(middle+1, high)</code>) consume <strong>stack frames</strong> — each frame holds <code>low</code>, <code>high</code>, <code>middleIndex</code> as local variables. This is why deep, naive recursion on huge arrays without a base-case cutoff (e.g., insertion sort under N=10) risks <code>StackOverflowError</code> territory, though in practice O(log N) depth for merge sort is very shallow (a 1-billion-item array is only ~30 levels deep).</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="course-content">2. Course Transcript Content (The "What")</h2>
+            
+            <h3>Key Concepts & Definitions</h3>
+            <ul>
+                <li><strong>Merge Sort:</strong> divide-and-conquer, comparison-based, stable, <code>O(N log N)</code>, <strong>not in-place</strong> — requires <code>O(N)</code> auxiliary memory (the <code>temp</code> array). Invented by John von Neumann (1945).</li>
+                <li><strong>Divide phase:</strong> recursively split the array at the midpoint until each sub-array has a single element (sorted by definition) — optionally switch to insertion sort below a threshold (~5–10 elements) to cut down recursive call overhead, since insertion sort runs near-linear on small/near-sorted inputs.</li>
+                <li><strong>Conquer/Merge phase:</strong> linear-time merge of two sorted sub-arrays using three indices (<code>i</code> for left, <code>j</code> for right, <code>k</code> for result) — copy the smaller head element, then flush whatever remains in either side.</li>
+                <li><strong>Parallel Merge Sort strategy:</strong> create only as many threads as <code>availableProcessors()</code> (not one thread per sub-array) — halve the thread budget at each recursive level (<code>numThreads / 2</code>) until it drops to &le;1, at which point fall back to <strong>sequential</strong> merge sort for that sub-array. The merge step itself is <em>always</em> sequential.</li>
+                <li><strong>Parallel Sum strategy:</strong> split the array into <code>ceil(length / numThreads)</code>-sized contiguous chunks, hand each chunk to a <code>ParallelWorker</code> thread that computes a partial sum, <code>join()</code> all workers, then sequentially add up the partial sums.</li>
+                <li><strong>Amdahl's Law:</strong> <code>Speedup(N) = 1 / ((1 - P) + P/N)</code>, where <code>P</code> = parallelizable fraction, <code>N</code> = processor count. The non-parallelizable fraction <code>(1 - P)</code> creates a hard asymptotic ceiling on speedup as <code>N → ∞</code>.</li>
+            </ul>
+
+            <h3>Code Snippets (from Transcript) — annotated</h3>
+
+            <p><strong>Sequential merge — the core combine step:</strong></p>
+<pre><code>private void merge(int low, int middleIndex, int high) {
+    for (int i = low; i &lt;= high; i++) {
+        tempArray[i] = nums[i];              // O(N) copy into scratch buffer
+    }
+
+    int i = low, j = middleIndex + 1, k = low;
+
+    while (i &lt;= middleIndex && j &lt;= high) {
+        if (tempArray[i] &lt; tempArray[j]) {
+            nums[k] = tempArray[i];
+            i++;
+        } else {
+            nums[k] = tempArray[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i &lt;= middleIndex) { nums[k] = tempArray[i]; k++; i++; }   // flush left remainder
+    while (j &lt;= high)        { nums[k] = tempArray[j]; k++; j++; }   // flush right remainder
+}</code></pre>
+            <ul>
+                <li><strong>JVM/memory-level view:</strong> <code>tempArray[i] = nums[i]</code> and the reverse write-back are plain heap array accesses — no synchronization is needed here <em>within a single thread's recursive call chain</em> because each recursive invocation owns a disjoint <code>[low, high]</code> range; there's no shared mutable state being raced on inside one thread's subtree.</li>
+                <li>The <code>while</code> loops are branch-heavy — on real CPUs this creates a <strong>branch-prediction-dependent bottleneck</strong>; that's part of why an efficient, well-tuned quicksort often edges out merge sort in practice despite equal Big-O, since quicksort's partition step is more branch-predictable and cache-friendly on random data.</li>
+            </ul>
+
+            <p><strong>Parallel merge sort — thread creation and halving the budget:</strong></p>
+<pre><code>private Thread createThread(int lowIndex, int highIndex, int numThreads) {
+    return new Thread(() -&gt; parallelMergeSort(lowIndex, highIndex, numThreads / 2));
+}
+
+public void parallelMergeSort(int lowIndex, int highIndex, int numThreads) {
+    if (numThreads &lt;= 1) {
+        mergeSort(lowIndex, highIndex);   // fall back to sequential — no more cores to hand off to
+        return;
+    }
+
+    int middleIndex = (lowIndex + highIndex) / 2;
+
+    Thread leftSorter  = createThread(lowIndex, middleIndex, numThreads);
+    Thread rightSorter = createThread(middleIndex + 1, highIndex, numThreads);
+
+    leftSorter.start();
+    rightSorter.start();
+
+    try {
+        leftSorter.join();
+        rightSorter.join();
+    } catch (InterruptedException e) {
+        e.printStackTrace();
+    }
+
+    merge(lowIndex, middleIndex, highIndex);   // sequential — must wait for both children
+}</code></pre>
+            <ul>
+                <li><strong>Critical JVM mechanic:</strong> <code>leftSorter.join()</code> followed by <code>rightSorter.join()</code> is what creates the <strong>happens-before edge</strong>. Without it, <code>merge()</code> could read <code>nums[]</code> positions that another thread hasn't finished writing — a textbook data race and a <strong>visibility bug</strong>, not just a logic bug. The JMM guarantees that everything written by <code>leftSorter</code> before it terminates is visible to the current thread <em>after</em> <code>join()</code> returns, without needing <code>volatile</code> on <code>nums</code>.</li>
+                <li><strong>Real cost you're paying:</strong> every single call to <code>createThread</code> spins up a <strong>brand-new native OS thread</strong>, which involves a syscall, a fresh stack allocation (default ~512KB–1MB per thread), and OS scheduler registration. This transcript's design (recursively halving <code>numThreads</code>) caps total thread count at roughly <code>2 * availableProcessors() - 1</code>, which is fine — but it's fragile: if you forgot the <code>numThreads &lt;= 1</code> base case, you'd recursively spawn threads all the way down to single-element sub-arrays, potentially creating <strong>millions of OS threads</strong> for a 10M-item array and crashing with <code>OutOfMemoryError: unable to create new native thread</code>.</li>
+            </ul>
+
+            <p><strong>Parallel sum — chunking with <code>Math.ceil</code>, and the off-by-one the instructor hit live:</strong></p>
+<pre><code>class ParallelWorker extends Thread {
+    private final int[] nums;
+    private final int lowIndex;
+    private final int highIndex;
+    private int partialSum = 0;
+
+    ParallelWorker(int[] nums, int lowIndex, int highIndex) {
+        this.nums = nums;
+        this.lowIndex = lowIndex;
+        this.highIndex = highIndex;
+    }
+
+    @Override
+    public void run() {
+        for (int i = lowIndex; i &lt; highIndex; i++) {
+            partialSum += nums[i];
+        }
+    }
+
+    public int getPartialSum() { return partialSum; }
+}
+
+public int sum(int[] nums) {
+    int size = (int) Math.ceil((double) nums.length / numThreads);
+
+    for (int i = 0; i &lt; numThreads; i++) {
+        int lowIndex = i * size;
+        int highIndex = Math.min(nums.length, (i + 1) * size);   // guards last-chunk overrun
+        workers[i] = new ParallelWorker(nums, lowIndex, highIndex);
+        workers[i].start();
+    }
+
+    try {
+        for (ParallelWorker worker : workers) worker.join();
+    } catch (InterruptedException e) {
+        e.printStackTrace();
+    }
+
+    int total = 0;
+    for (ParallelWorker worker : workers) total += worker.getPartialSum();
+    return total;
+}</code></pre>
+            <ul>
+                <li><strong>The bug the instructor hit:</strong> <code>(i + 1) * size</code> for the last chunk can exceed <code>nums.length</code> (e.g., 6 items / 4 threads → size=2, last chunk's high = 8, which is out of bounds). <code>Math.min(nums.length, ...)</code> is the fix — a small but classic <strong>off-by-one in chunk boundary math</strong>, extremely common when hand-rolling data partitioning instead of using a library like Fork-Join that handles this for you.</li>
+                <li><strong>Visibility note:</strong> <code>partialSum</code> is a plain <code>int</code> field, not <code>volatile</code>, and that's <em>fine</em> here — because the only reader (<code>getPartialSum()</code>) is called from the main thread strictly <strong>after</strong> <code>worker.join()</code> returns. The happens-before edge from <code>join()</code> makes an explicit <code>volatile</code> redundant. If you ever read <code>partialSum</code> from a <em>different, non-joining</em> thread while the worker might still be running, you'd have a genuine visibility bug and would need <code>volatile</code> or an <code>AtomicInteger</code>.</li>
+            </ul>
+
+            <h3>Important Caveats/Warnings (explicitly from the transcript)</h3>
+            <ul>
+                <li>Merge sort is <strong>not in-place</strong> — <code>O(N)</code> extra memory is a real, named disadvantage versus heap sort.</li>
+                <li>The <strong>merge/reduce step is always sequential</strong> — this is stated repeatedly and is the seed for Amdahl's Law later in the same section.</li>
+                <li>Do <strong>not</strong> create one thread per sub-array/chunk — only create as many threads as <code>availableProcessors()</code>, because OS context-switching between threads is expensive (state save/restore).</li>
+                <li><strong>Parallel sum is <em>slower</em> than sequential sum for small-to-medium N</strong> (demonstrated at 100 items, 10M items, even 100M items) — thread creation/coordination overhead dominates until you reach roughly the billion-item scale, where parallel finally wins (~2x). This is a direct, measured illustration of Amdahl's Law/overhead trade-offs, not a hard rule of thumb to memorize as a fixed threshold.</li>
+                <li>Integer overflow bites at the 1-billion-item sum (32-bit <code>int</code> accumulator) — a correctness bug, not a concurrency bug, but worth flagging since it appeared in the same demo (fix: <code>long</code> accumulator).</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation & Examples (The "How")</h2>
+            
+            <h3>Real-World Use Cases</h3>
+            <ol>
+                <li><strong>Financial risk aggregation / EOD batch jobs:</strong> Summing exposures, P&L deltas, or position sizes across millions of trade records partitioned by instrument or desk — structurally identical to the parallel-sum pattern, just swapping <code>int</code> sums for <code>BigDecimal</code>/<code>double</code> aggregations with proper rounding semantics.</li>
+                <li><strong>Log/metrics pre-aggregation before a reduce stage:</strong> Splitting a large in-memory batch of log lines or metric samples across worker threads to compute partial counts/sums/histograms before merging — the same divide → independent work → sequential combine shape as both examples here, and the direct conceptual ancestor of what <code>Stream.parallel()</code> and Fork-Join do for you automatically later in this course.</li>
+                <li><strong>Image/computer-vision feature pipelines</strong> (explicitly mentioned in transcript): summing pixel-intensity regions for Haar-like features in classical CV pipelines — latency-sensitive, high-volume numeric reduction, exactly the kind of workload where the crossover point favoring parallelism (as demonstrated at the ~1 billion mark) actually matters in production.</li>
+            </ol>
+
+            <h3>Complete Code Implementation</h3>
+            <p>A production-hardened version of the parallel sum, addressing gaps the lecture left open (overflow, no thread-pool reuse, no defensive checks):</p>
+
+<pre><code>import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
+
+public class ProductionParallelSum {
+
+    private final int numThreads;
+
+    public ProductionParallelSum(int numThreads) {
+        if (numThreads &lt; 1) throw new IllegalArgumentException("numThreads must be &gt;= 1");
+        this.numThreads = numThreads;
+    }
+
+    /**
+     * Uses a bounded, reusable ExecutorService instead of raw Thread creation —
+     * avoids the OS thread-creation cost on every call, and gives us
+     * structured shutdown + timeout handling.
+     */
+    public long sum(int[] nums) throws InterruptedException, ExecutionException {
+        if (nums.length == 0) return 0L;
+
+        ExecutorService pool = Executors.newFixedThreadPool(numThreads);
+        int size = (int) Math.ceil((double) nums.length / numThreads);
+        var futures = new java.util.ArrayList&lt;Future&lt;Long&gt;&gt;();
+
+        try {
+            for (int i = 0; i &lt; numThreads; i++) {
+                int lowIndex = i * size;
+                int highIndex = Math.min(nums.length, (i + 1) * size);
+                if (lowIndex &gt;= highIndex) continue; // fewer items than threads
+
+                futures.add(pool.submit(() -&gt; {
+                    long partial = 0L;                    // long, not int -&gt; avoids overflow
+                    for (int idx = lowIndex; idx &lt; highIndex; idx++) {
+                        partial += nums[idx];
+                    }
+                    return partial;
+                }));
+            }
+
+            long total = 0L;
+            for (Future&lt;Long&gt; f : futures) {
+                total += f.get(30, TimeUnit.SECONDS);      // bounded wait, not an unbounded join()
+            }
+            return total;
+
+        } finally {
+            pool.shutdown();                               // always release pool resources
+            if (!pool.awaitTermination(5, TimeUnit.SECONDS)) {
+                pool.shutdownNow();                         // graceful, then forceful cleanup
+            }
+        }
+    }
+}</code></pre>
+
+            <p><strong>Why these changes matter at a senior level:</strong></p>
+            <ul>
+                <li><code>ExecutorService</code> + <code>Future&lt;Long&gt;</code> replaces raw <code>Thread</code>/<code>join()</code> — reusable pool, proper timeout via <code>Future.get(timeout, unit)</code> instead of an unbounded <code>join()</code> that can hang forever if a worker deadlocks or infinite-loops.</li>
+                <li><code>long</code> accumulator directly fixes the overflow bug the instructor's own demo hit at 1 billion items.</li>
+                <li><code>finally { pool.shutdown(); ... }</code> — a raw-<code>Thread</code> implementation has no equivalent leak risk (threads terminate on their own), but an <code>ExecutorService</code> <strong>will leak non-daemon threads forever</strong> if you forget to shut it down — a very common production incident source.</li>
+            </ul>
+
+            <h3>Testing Concurrent Code</h3>
+            <ul>
+                <li><strong>Correctness under concurrency:</strong> run the parallel and sequential implementations on the <em>same</em> randomly generated array (as the instructor did) and <code>assertEquals</code> the results across dozens of randomized trials and array sizes (0, 1, small, and multi-million element cases) — this catches boundary bugs like the <code>Math.min</code> chunk overrun.</li>
+                <li><strong>Timeout-guarded execution:</strong> wrap the parallel call in <code>assertTimeoutPreemptively(Duration.ofSeconds(5), () -&gt; ...)</code> (JUnit 5) so a hung worker thread fails the test suite fast instead of blocking the build indefinitely.</li>
+                <li><strong>Stress/fuzz for chunk-boundary math:</strong> parametrize tests across <code>numThreads</code> values that don't evenly divide the array length (e.g., array of 7 items over 3 threads) — this is exactly where off-by-one chunking bugs like the one shown live in the transcript.</li>
+                <li><strong>Deterministic thread-count control:</strong> don't rely on <code>availableProcessors()</code> in your unit tests — inject the thread count explicitly (as this implementation's constructor does) so tests are reproducible across CI machines with different core counts.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture, and Performance (The "Why")</h2>
+            
+            <h3>Performance Implications</h3>
+            <ul>
+                <li><strong>Thread creation cost dominates at small N.</strong> The lecture's own numbers make this concrete: at 100 and even 10M items, parallel sum was <em>slower</em> than sequential; only at ~1 billion items did parallel pull ahead (~2x). Each <code>new Thread().start()</code> is a real OS-level cost (stack allocation + scheduler registration) that a tight sequential loop simply doesn't pay.</li>
+                <li><strong>Context-switching overhead</strong> compounds this: with <code>numThreads</code> capped at <code>availableProcessors()</code>, you get low switching overhead; if you'd instead spawned one thread per array element (the naive-but-tempting approach), the OS scheduler would burn most of its time swapping thread state in and out rather than doing sum/compare work.</li>
+                <li><strong>GC pressure differs meaningfully between the two algorithms in this section:</strong> merge sort's <code>tempArray</code> is a single <code>O(N)</code> allocation reused across the whole sort — low GC churn. Sum's <code>ParallelWorker</code> objects are small, short-lived, and proportional to <code>numThreads</code> (not <code>N</code>) — negligible GC impact either way. If you'd naively created one worker object per <em>chunk of chunks</em> or per array element, you'd generate significant young-gen churn.</li>
+                <li><strong>Cache locality:</strong> contiguous chunking (as both implementations do) is deliberately cache-friendly — each thread's for-loop walks sequential memory, maximizing L1/L2 cache-line reuse. A naive strided partition (thread <em>i</em> takes every <em>i</em>-th element) would be far worse for cache performance, even though it's "equally parallel" on paper.</li>
+            </ul>
+
+            <h3>Tradeoff Analysis Matrix: Sequential vs. Hand-Rolled Parallel (this lecture's style) vs. <code>ExecutorService</code>-based</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Criteria</th>
+                        <th>Sequential</th>
+                        <th>Hand-rolled <code>Thread</code>/<code>join()</code> (as taught)</th>
+                        <th><code>ExecutorService</code>-based</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Throughput (large N, e.g. &gt;100M items)</td>
+                        <td>Low</td>
+                        <td>High</td>
+                        <td>High (comparable)</td>
+                    </tr>
+                    <tr>
+                        <td>Throughput (small/medium N)</td>
+                        <td><strong>Best</strong> — no overhead</td>
+                        <td>Worse — thread creation dominates</td>
+                        <td>Better than raw threads (pool reuse), still worse than sequential at tiny N</td>
+                    </tr>
+                    <tr>
+                        <td>Latency predictability</td>
+                        <td>Very predictable</td>
+                        <td>Variable — OS scheduler dependent</td>
+                        <td>More predictable via <code>Future.get(timeout)</code></td>
+                    </tr>
+                    <tr>
+                        <td>Memory overhead</td>
+                        <td>Minimal</td>
+                        <td>One stack per thread, created &amp; destroyed per call</td>
+                        <td>Stacks amortized — pool reused across calls</td>
+                    </tr>
+                    <tr>
+                        <td>Ease of use / Risk</td>
+                        <td>Trivial, no race risk</td>
+                        <td>Manual <code>join()</code> ordering, easy to forget error handling, thread-count bugs</td>
+                        <td>Slightly more boilerplate, but structured lifecycle (shutdown, timeouts) reduces risk</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Common Pitfalls (Senior Level)</h3>
+            <ul>
+                <li><strong>Visibility/Ordering:</strong> The correctness of both algorithms in this section hinges entirely on <code>join()</code>'s happens-before guarantee. If a future refactor replaced <code>join()</code> with, say, a shared <code>boolean done</code> flag checked in a busy-wait loop <em>without</em> <code>volatile</code>, you'd introduce a genuine JMM visibility bug — the reading thread could spin forever on a stale cached value of <code>done</code>, or read partially-written sub-array data.</li>
+                <li><strong>Deadlock/Livelock/Starvation:</strong> These specific implementations are structurally deadlock-free (no thread waits on a resource another thread it's not related to holds — it's a simple fork/join tree), but the pattern is fragile: if you introduced any shared lock inside <code>ParallelWorker.run()</code> (e.g., to update a shared counter), you'd need to audit lock-acquisition order across all worker threads to avoid the classic circular-wait deadlock condition.</li>
+                <li><strong>Resource Exhaustion:</strong> The single biggest risk in the <em>taught</em> implementation — uncapped/uncareful recursive thread creation. If the <code>numThreads &lt;= 1</code> base case in <code>parallelMergeSort</code> were removed or miscalculated (e.g., always passing the same <code>numThreads</code> instead of halving), you'd recursively spawn threads down to single-element sub-arrays: for a 10M-item array that's up to ~2×10M thread creations, guaranteed <code>OutOfMemoryError: unable to create new native thread</code> well before that.</li>
+                <li><strong>Chunk-boundary arithmetic bugs:</strong> The exact bug the instructor hit live (<code>ArrayIndexOutOfBoundsException</code> from <code>(i+1) * size</code> overrunning <code>nums.length</code>) is one of the most common real-world bugs in hand-rolled data partitioning — always guard the last chunk explicitly, or better, use a library primitive that does it for you.</li>
+            </ul>
+
+            <h3>Architectural Impact</h3>
+            <ul>
+                <li>This lecture's "N threads = N cores, sequential combine" pattern is the <strong>conceptual seed of the Fork-Join framework</strong> you'll formalize soon — Fork-Join automates exactly this halving-recursion-and-join shape via a work-stealing pool, removing the manual thread-count-halving and <code>join()</code>-ordering bookkeeping you did by hand here.</li>
+                <li>At a system-design level, this pattern only pays off for <strong>CPU-bound, in-memory, embarrassingly-parallel</strong> workloads on a single JVM/machine. It does <em>not</em> generalize to distributed batch processing (multiple machines) — for that scale, the same divide/conquer/reduce shape reappears as MapReduce/Spark-style architectures, but with network partitioning, fault tolerance, and shuffle costs replacing simple <code>Thread.join()</code>.</li>
+                <li>Amdahl's Law is the reason horizontal scaling strategies increasingly favor <strong>reducing the sequential fraction of a pipeline</strong> (e.g., replacing a single sequential merge/reduce step with a tree-reduction across workers, or batching the reduce step) rather than simply adding more compute — a core consideration in designing any high-throughput microservice or data pipeline.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: Why is merge sort described as "not in-place," and what's the practical cost of that?</strong><br>
+            A: Merge sort's merge step needs to compare elements from two already-sorted sub-arrays and write them into a separate buffer in sorted order — you can't safely do this by overwriting the original array in place while still reading from it. This costs <code>O(N)</code> auxiliary memory (the <code>temp</code> array), which is the standard trade-off cited against heap sort (same <code>O(N log N)</code> time, <code>O(1)</code> space) or quicksort (in-place, typically faster in practice on random data).</p>
+
+            <p><strong>Q2: Why does the parallel implementation cap thread count at <code>availableProcessors()</code> instead of one thread per sub-array/chunk?</strong><br>
+            A: Because OS thread creation and context-switching are expensive — each thread needs a native stack, kernel bookkeeping, and scheduler registration. Beyond the number of physical/logical cores, additional threads don't add real parallelism (there's nowhere new to run them); they only add scheduling overhead. Matching thread count to core count keeps every thread doing real work rather than waiting in a run queue.</p>
+
+            <p><strong>Q3: In the parallel sum implementation, why is <code>partialSum</code> allowed to be a plain (non-volatile, non-atomic) <code>int</code> field?</strong><br>
+            A: Because it's only written by its own worker thread and only read by the main thread <em>after</em> calling <code>worker.join()</code>. The JMM guarantees a happens-before relationship across <code>join()</code> — everything the worker wrote before terminating is visible to the joining thread afterward. No additional synchronization is required for this specific access pattern.</p>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: The lecture showed parallel sum being <em>slower</em> than sequential sum at 10 million items, but faster at 1 billion. Why does that crossover exist, and how would you find it for a real workload instead of guessing?</strong><br>
+            A: At smaller N, the fixed cost of creating and joining threads (each a syscall + stack allocation) outweighs the actual per-element work saved by parallelizing a simple <code>+=</code> loop, which is already extremely cheap per element. As N grows, the per-thread payoff (real CPU-bound work) eventually dwarfs the fixed thread-management overhead. Rather than guessing a static threshold, you'd benchmark with something like JMH across a range of N values on target hardware, and/or make the algorithm choose sequential vs. parallel dynamically based on <code>N</code> and <code>availableProcessors()</code> — a technique the Fork-Join framework's default thresholding does automatically.</p>
+
+            <p><strong>Q5: Compare this hand-rolled <code>Thread</code>+<code>join()</code> approach to using an <code>ExecutorService</code> for the same parallel-sum task. When would you actually prefer raw threads?</strong><br>
+            A: An <code>ExecutorService</code> amortizes thread-creation cost across many calls (pool reuse), gives you bounded waits via <code>Future.get(timeout)</code> instead of unbounded <code>join()</code> that can hang forever if a worker deadlocks or infinite-loops, and centralizes lifecycle management (<code>shutdown()</code>/<code>awaitTermination()</code>). Raw threads are reasonable only for a one-shot, short-lived program (like this classroom demo) where pool reuse buys nothing and the extra <code>ExecutorService</code> boilerplate isn't worth it. In any long-running service, the pool-based approach is the correct default.</p>
+
+            <p><strong>Q6: The instructor hit an <code>ArrayIndexOutOfBoundsException</code> from <code>(i + 1) * size</code> overrunning the array on the last chunk. What class of bug is this, and how do you defend against it systematically rather than patching one instance?</strong><br>
+            A: It's an off-by-one/boundary bug in manual data partitioning — extremely common whenever array length isn't evenly divisible by thread count. Beyond the immediate <code>Math.min(nums.length, ...)</code> fix, defend against it systematically by writing parametrized tests that specifically use array lengths <em>not</em> evenly divisible by the thread count (e.g., 7 items / 3 threads), and by preferring a well-tested partitioning utility (or the Fork-Join framework's automatic splitting) over hand-rolled chunk math wherever the codebase already has access to one.</p>
+
+            <h3>Advanced</h3>
+            <p><strong>Q7: Walk through exactly which JMM guarantee makes it safe for the main thread to call <code>merge()</code> immediately after <code>leftSorter.join(); rightSorter.join();</code> without any explicit <code>synchronized</code> block or <code>volatile</code> field on <code>nums</code>.</strong><br>
+            A: <code>Thread.join()</code> has a specified happens-before relationship in the JMM: all actions performed by a thread before it terminates happen-before any other thread successfully returns from a <code>join()</code> on that thread. So every write <code>leftSorter</code> and <code>rightSorter</code> made to <code>nums[]</code> (within their respective <code>[low, high]</code> ranges) is guaranteed visible to the main thread once both <code>join()</code> calls return — without this, per-core CPU caches could hold stale copies of <code>nums[]</code> and the merge could read garbage/half-written values. This is exactly analogous to how <code>volatile</code> writes happen-before subsequent <code>volatile</code> reads, just scoped to thread lifecycle instead of a single field.</p>
+
+            <p><strong>Q8: The parallel merge sort recursively halves <code>numThreads</code> at every level. What happens if you remove the <code>numThreads &lt;= 1</code> base case (or introduce a bug where it's always passed the same value instead of halved), and how would this manifest differently for a 100-item array versus a 100-million-item array?</strong><br>
+            A: Without the base-case cutoff, <code>parallelMergeSort</code> would keep spawning two new native threads at every recursion level, all the way down to single-element sub-arrays — for an array of length N that's roughly <code>2N</code> thread creations. For 100 items, you'd likely just see terrible performance (thread overhead massively dwarfing the trivial sort work) but probably not crash. For 100 million items, you'd almost certainly hit <code>OutOfMemoryError: unable to create new native thread</code> well before completion, since the JVM/OS has a hard ceiling on live native threads (typically low thousands depending on stack size and available virtual memory) — a textbook resource-exhaustion failure mode distinct from a logic bug.</p>
+
+            <p><strong>Q9: Given Amdahl's Law, if profiling shows a pipeline is 90% parallelizable, what's the theoretical maximum speedup as core count → ∞, and what senior-level architectural lever would you actually pull to do better than that ceiling?</strong><br>
+            A: With <code>P = 0.9</code>, as <code>N → ∞</code>, <code>Speedup → 1 / (1 - P) = 1 / 0.1 = 10x</code> — no matter how many cores you throw at it, you cannot exceed a 10x speedup while that 10% sequential fraction remains fixed in size. The correct lever isn't "add more cores" — it's <strong>reducing the absolute size of the sequential portion itself</strong> (e.g., replacing a single flat sequential reduce/merge with a parallel tree-reduction across a hierarchy of workers, batching I/O in the sequential segment, or restructuring the algorithm so more of the combine step can also run concurrently, as merge sort partially allows by parallelizing merges at different tree levels rather than only the leaves). This reframes Amdahl's Law from a hard limit into a target for architectural redesign, which is also the direction Gustafson's Law pushes back on (worth mentioning if the interviewer probes further: Gustafson's Law argues that as problem size grows, the parallelizable fraction tends to grow too, softening Amdahl's pessimism for scalable workloads).</p>
+
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <ul>
+                <li>I can explain why merge sort requires <code>O(N)</code> auxiliary memory and why that specifically rules out true in-place sorting for this algorithm.</li>
+                <li>I can trace, frame by frame, how merge sort's recursive divide phase uses the call stack, and where/why the base case triggers unwinding and merging.</li>
+                <li>I can design a thread-count-bounded parallel divide-and-conquer algorithm (capping at <code>availableProcessors()</code>, halving the budget at each recursive level) instead of naively spawning one thread per sub-problem.</li>
+                <li>I can explain precisely which JMM happens-before guarantee (<code>Thread.join()</code>) makes it safe to read another thread's writes without <code>volatile</code> or explicit synchronization, and identify when that guarantee does <em>not</em> apply (e.g., non-joining readers).</li>
+                <li>I can identify and fix off-by-one chunk-boundary bugs in manual data-partitioning code (<code>Math.min</code> guard on the last chunk).</li>
+                <li>I can articulate why hand-rolled parallel algorithms underperform sequential ones at small/medium N, and can migrate a raw-<code>Thread</code> implementation to a reusable, timeout-bounded <code>ExecutorService</code>-based one.</li>
+                <li>I can state Amdahl's Law from memory, compute a theoretical speedup ceiling given a parallelizable fraction <code>P</code>, and explain — at a senior/architectural level — why "reduce the sequential fraction" is the correct lever rather than "add more cores" once you're near that ceiling.</li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
