@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: Stream API Fundamentals</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            color: var(--heading-color);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Context & Scope</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Code</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Stream API Fundamentals</h1>
+                <h2 style="margin-top: -10px; margin-bottom: 0.5rem;">Sources, Pipelines, Laziness, and Internal Iteration</h2>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: 0; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                
+                <p><strong>Course position:</strong> <em>Stream API</em> section, first half — covers: intro theory → numeric streams → custom-object streams (filter/sort/map, informal grouping-by-type) → the 2-word-title filtering exercise → external vs. internal iteration → strings/characters → collections vs. streams (laziness) → file processing with streams.</p>
+                <p><strong>Already known (assumed):</strong> Everything through the <em>Fork-Join Framework</em> section (manual and Fork-Join-based parallelism, thresholds, work-stealing).</p>
+                <p><strong>Not yet covered (deliberately not front-loaded):</strong> short-circuiting/loop fusion, <code>map()</code>/<code>flatMap()</code> in their formal dedicated lecture, the formal <code>groupingBy()</code>/<code>groupingBy()+flatMap()</code>/<code>partitioningBy()</code> lectures (note: this batch's transcript already <em>uses</em> <code>Collectors.groupingBy()</code> informally inside the "custom objects part 2" lecture — I'm treating that specific usage as taught material since it's literally in the transcript, but I won't expand on <code>groupingBy()</code>'s further formal variants, downstream collectors, or <code>partitioningBy()</code> since those get their own dedicated treatment soon), <code>Optional</code>/<code>OptionalInt</code> family, <code>allMatch</code>/<code>noneMatch</code>/<code>findFirst</code>/<code>findAny</code>, and the three parallelization-with-streams examples (this section's payoff, explicitly deferred by the instructor to "the next lecture").</p>
+                
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            
+            <div class="highlight-box">
+                <p><strong>One-Sentence Definition:</strong><br>
+                A Java Stream is a lazily-evaluated, single-use, functional pipeline over a data source — declared as source → intermediate operations (each returning a new stream) → one terminal operation — that lets the JVM fuse and optimize the whole chain (including automatic parallelization) instead of you hand-writing imperative loops.</p>
+            </div>
+
+            <h3>The Architecture Analogy</h3>
+            <p>Think of a stream pipeline like a factory assembly conveyor belt versus a warehouse. A <code>Collection</code> (ArrayList, HashMap) is the warehouse — everything is already manufactured, boxed, and sitting on shelves, ready to be picked up in any order, any number of times. A <code>Stream</code> is the conveyor belt itself — items are pulled and processed <strong>one at a time, on demand</strong>, as they reach each station (filter station, map station, sort station), and once the belt has run to the end, it's done; you can't rewind and run the same physical belt again. This is exactly why streams can represent even an infinite sequence (an assembly line that never has to finish building all its output in advance) while a collection fundamentally cannot.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <ul>
+                <li>Calling <code>.stream()</code> or <code>Arrays.stream(...)</code> doesn't eagerly copy or iterate the source — it wraps it in a <code>Stream</code> object holding a reference to the source and an (initially empty) pipeline of operations.</li>
+                <li>Each <strong>intermediate operation</strong> (<code>filter</code>, <code>map</code>, <code>sorted</code>) doesn't execute anything immediately — it returns a <em>new</em> <code>Stream</code> object that just adds one more stage description to the pipeline. Nothing actually runs yet.</li>
+                <li>Only when a <strong>terminal operation</strong> (<code>forEach</code>, <code>collect</code>, <code>sum</code>) is invoked does the JVM walk the pipeline and pull elements through it — and critically, it pulls them <strong>one element at a time through every stage</strong> ("vertical" execution / loop fusion) rather than running the filter over the <em>entire</em> collection first, then the map over the <em>entire</em> filtered result, then sorting, etc. This is the JVM-level reason streams can avoid unnecessary work and even support infinite sources.</li>
+                <li>Under the hood, a lambda expression like <code>x -&gt; System.out.println(x)</code> or a method reference like <code>System.out::println</code> is compiled via the <code>invokedynamic</code> bytecode instruction and the <code>LambdaMetafactory</code>, which synthesizes a functional-interface implementation at class-load time rather than generating a named inner class per lambda — this is why lambdas are lightweight compared to anonymous inner classes, though each distinct lambda call site still ends up as its own generated class under the hood at runtime.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="course-content">2. Course Transcript Content (The "What")</h2>
+            
+            <h3>Key Concepts & Definitions</h3>
+            <ul>
+                <li><strong>Stream</strong>: a sequence of elements from a source that supports data-processing operations; unlike a data structure, a stream is about <em>computation</em>, not storage.</li>
+                <li><strong>Pipeline stages</strong>: <strong>source</strong> (a <code>Collection</code>, array, <code>IntStream.range(...)</code>, <code>Files.lines(...)</code>, etc.) → <strong>intermediate operations</strong> (return a <code>Stream</code>, e.g., <code>filter</code>, <code>sorted</code>, <code>map</code>) → <strong>terminal operation</strong> (returns a scalar or <code>void</code>, e.g., <code>forEach</code>, <code>sum</code>, <code>collect</code>).</li>
+                <li><strong>Method reference (<code>::</code>)</strong>: shorthand for a lambda that just calls an existing method, e.g., <code>System.out::println</code> in place of <code>x -&gt; System.out.println(x)</code>.</li>
+                <li><strong><code>filter(Predicate)</code></strong>: intermediate — keeps elements matching a boolean condition.</li>
+                <li><strong><code>sorted(Comparator)</code></strong> / <strong><code>sorted()</code></strong>: intermediate — orders elements; <code>Comparator.comparing(Book::getAuthor)</code> sorts by a derived key; <code>Comparator.reverseOrder()</code> reverses natural order.</li>
+                <li><strong><code>map(Function)</code></strong>: intermediate — transforms each element's <em>type</em>, e.g., <code>Stream&lt;Book&gt;</code> → <code>Stream&lt;String&gt;</code> via <code>Book::getTitle</code>.</li>
+                <li><strong><code>limit(n)</code></strong>: intermediate — truncates the stream to at most <code>n</code> elements.</li>
+                <li><strong><code>collect(Collectors.toList())</code></strong>: terminal — performs a "mutable reduction" of the stream into a <code>List</code>.</li>
+                <li><strong><code>Collectors.groupingBy(classifier)</code></strong> <em>(used informally here, ahead of its dedicated lecture)</em>: terminal collector that produces a <code>Map&lt;K, List&lt;T&gt;&gt;</code>, bucketing elements by a derived key (e.g., grouping <code>Book</code>s by their <code>Type</code> enum).</li>
+                <li><strong><code>forEach(Consumer)</code></strong>: terminal — applies an action to every element; returns <code>void</code>.</li>
+                <li><strong>External iteration</strong>: the traditional <code>Iterator</code>/<code>hasNext()</code>/<code>next()</code> (or for-each loop) pattern — the <em>caller</em> explicitly drives the traversal, one <code>next()</code> call at a time.</li>
+                <li><strong>Internal iteration</strong>: the Stream API pattern — the <em>library</em> (not your code) drives traversal internally, which is what enables under-the-hood optimizations (better memory-locality-aware ordering, and, critically, transparent parallelization) that external iteration structurally cannot support.</li>
+                <li><strong>Laziness</strong>: intermediate operations are not executed when declared — only when a terminal operation triggers pipeline evaluation, and even then, elements are pulled through one at a time rather than materializing a full intermediate collection at every stage.</li>
+                <li><strong>Single-use property</strong>: once a terminal operation has consumed a stream, that exact <code>Stream</code> object is exhausted — invoking another terminal operation on it throws <code>IllegalStateException: stream has already been operated upon or closed</code>. A fresh <code>Stream</code> object must be created (e.g., by calling <code>.stream()</code> again) to traverse the same source again.</li>
+                <li><strong><code>Files.lines(Path)</code></strong>: creates a <code>Stream&lt;String&gt;</code> reading a file lazily, line by line — checked to throw <code>IOException</code>.</li>
+            </ul>
+
+            <h3>Code Snippets (from Transcript) — annotated</h3>
+
+            <p><strong>Numeric stream basics — imperative vs. stream style:</strong></p>
+<pre><code>int[] nums = {1, 5, 3, -1, 9, 12};
+
+// Imperative
+int sum = 0;
+for (int i = 0; i &lt; nums.length; i++) {
+    sum += nums[i];
+}
+
+// Stream equivalent
+int streamSum = Arrays.stream(nums).sum();
+Arrays.stream(nums).forEach(System.out::println);</code></pre>
+            <ul>
+                <li><strong>JVM view:</strong> <code>Arrays.stream(nums)</code> returns a specialized <code>IntStream</code> (not a boxed <code>Stream&lt;Integer&gt;</code>) — this avoids autoboxing every <code>int</code> into an <code>Integer</code> object, which matters for GC pressure on large numeric datasets. <code>IntStream.range(0, 5)</code> similarly avoids boxing when generating a numeric sequence directly, as used later for <code>IntStream.range(0, 9).forEach(x -&gt; System.out.println(x + " "))</code>.</li>
+                <li><code>.sum()</code> is a specialized terminal reduction available only on the primitive stream types (<code>IntStream</code>/<code>LongStream</code>/<code>DoubleStream</code>) — general <code>Stream&lt;T&gt;</code> has no <code>.sum()</code>, since summing arbitrary objects isn't meaningful without a combining function.</li>
+            </ul>
+
+            <p><strong>Filter as an intermediate operation:</strong></p>
+<pre><code>IntStream.range(0, 10)
+    .filter(x -&gt; x &gt; 4)
+    .forEach(x -&gt; System.out.println(x));</code></pre>
+            <ul>
+                <li><code>filter</code> returns a <em>new</em> <code>IntStream</code> — nothing is computed here yet. Only when <code>forEach</code> (the terminal operation) executes does the JVM pull <code>0..9</code> through the filter one value at a time, printing only values passing the predicate. This single-pass, element-at-a-time execution is loop fusion in miniature (the course's own dedicated "short-circuiting and loop fusion" lecture will formalize this further later).</li>
+            </ul>
+
+            <p><strong>Custom-object pipeline — filter → sort → map → collect:</strong></p>
+<pre><code>List&lt;Book&gt; novels = books.stream()
+    .filter(b -&gt; b.getType() == Type.NOVEL)
+    .collect(Collectors.toList());
+
+List&lt;String&gt; titlesByPageCountAscending = books.stream()
+    .sorted(Comparator.comparing(Book::getPages))
+    .map(Book::getTitle)
+    .collect(Collectors.toList());</code></pre>
+            <ul>
+                <li><strong>Why <code>map</code> changes the element type:</strong> the pipeline starts as <code>Stream&lt;Book&gt;</code>; after <code>.map(Book::getTitle)</code>, it becomes <code>Stream&lt;String&gt;</code> — this is precisely why the course flags a "type mismatch" moment when first reaching for <code>Book::getAuthor</code> directly inside <code>println</code> without <code>map</code> first. <code>map</code> is the tool for projecting from the whole object down to one derived field.</li>
+                <li><strong>Ordering of <code>sorted</code> vs. <code>map</code> matters conceptually, not just stylistically:</strong> sorting on <code>Book::getPages</code> must happen <em>while the elements are still <code>Book</code> objects</em> (so the comparator has access to the page count) — sorting after mapping down to <code>String</code> titles would sort alphabetically instead, a different (and wrong, for this task) result.</li>
+            </ul>
+
+            <p><strong>Grouping by type (informal use of <code>Collectors.groupingBy</code>, ahead of its dedicated lecture):</strong></p>
+<pre><code>Map&lt;Type, List&lt;Book&gt;&gt; booksByType = books.stream()
+    .collect(Collectors.groupingBy(Book::getType));
+
+booksByType.entrySet().stream()
+    .forEach(entry -&gt; System.out.println(entry));</code></pre>
+            <ul>
+                <li>Produces one list bucket per distinct <code>Type</code> enum value actually present in the data — note only <em>used</em> enum constants appear as keys; an enum value with zero matching books simply doesn't appear, it isn't shown as an empty list.</li>
+            </ul>
+
+            <p><strong>External vs. internal iteration — the exact contrast drawn in the transcript:</strong></p>
+<pre><code>// External iteration — caller explicitly drives traversal
+List&lt;String&gt; titlesExternal = new ArrayList&lt;&gt;();
+Iterator&lt;Book&gt; iterator = books.iterator();
+while (iterator.hasNext()) {
+    Book book = iterator.next();
+    titlesExternal.add(book.getTitle());
+}
+
+// Internal iteration — the Stream library drives traversal
+List&lt;String&gt; titlesInternal = books.stream()
+    .map(Book::getTitle)
+    .collect(Collectors.toList());</code></pre>
+            <ul>
+                <li><strong>Why this specific distinction is called out as crucial:</strong> with external iteration, the calling code decides "get the next item" one call at a time, in strict source order, with zero visibility into memory layout — the library backing the stream has no opportunity to reorder for cache locality or split work across threads. With internal iteration, the Stream implementation <em>owns</em> the traversal strategy internally, which is precisely what makes safe automatic parallelization (the section's payoff, coming in the next lecture) possible — you literally cannot parallelize a raw <code>while (iterator.hasNext())</code> loop safely without doing all the manual thread/lock bookkeeping from the earlier sections of this course.</li>
+            </ul>
+
+            <p><strong>Streams are single-use — the transcript's live demonstration of the failure:</strong></p>
+<pre><code>Stream&lt;String&gt; nameStream = names.stream();
+nameStream.forEach(System.out::println);   // works
+nameStream.forEach(System.out::println);   // throws IllegalStateException</code></pre>
+            <ul>
+                <li><strong>Fix:</strong> call <code>.stream()</code> again to get a fresh <code>Stream</code> object bound to the same underlying source — the <em>source</em> (the <code>List</code>) is reusable; the <em>Stream object</em> wrapping one particular pipeline traversal of it is not.</li>
+            </ul>
+
+            <p><strong>File processing with streams:</strong></p>
+<pre><code>List&lt;String&gt; namesStartingWithS = Files.lines(Path.of(filePath))
+    .filter(name -&gt; name.startsWith("S"))
+    .collect(Collectors.toList());</code></pre>
+            <ul>
+                <li><code>Files.lines(Path)</code> lazily streams the file line-by-line rather than reading the entire file into memory up front — the same laziness principle demonstrated abstractly with the "infinite prime numbers" example applies concretely here: for a very large file, only the lines actually needed to satisfy the terminal operation (and any short-circuiting, once you cover that formally) need ever be read into memory at once.</li>
+            </ul>
+
+            <h3>Important Caveats/Warnings (explicitly from the transcript)</h3>
+            <ul>
+                <li><strong>A stream can be traversed exactly once.</strong> Reusing an already-consumed <code>Stream</code> object throws <code>IllegalStateException: stream has already been operated upon or closed</code> — demonstrated live as a deliberate "gotcha."</li>
+                <li><strong>Intermediate operations return a stream; terminal operations return a scalar or <code>void</code>.</strong> <code>forEach</code> is explicitly called out as returning <code>void</code>, contrasted with <code>filter</code>/<code>sorted</code>/<code>map</code> which return <code>Stream</code>.</li>
+                <li><strong>Collections require the entire dataset to exist before the collection can be built</strong>, whereas streams compute elements <em>on demand</em> — illustrated with the concrete example that generating "all prime numbers" into a collection would require an infinite loop, whereas a lazily-evaluated stream can represent that sequence without ever fully materializing it (this foreshadows, but does not yet formally cover, why unbounded streams need a short-circuiting terminal operation like <code>limit</code> or <code>findFirst</code> — that formal treatment comes in the dedicated lecture).</li>
+                <li><strong>A collection can be traversed as many times as you like; a stream cannot</strong> — this is stated as a direct, named contrast, not just an implementation detail.</li>
+                <li><strong>Autoboxing avoidance is implicit but real:</strong> using <code>Arrays.stream(int[])</code> yields an <code>IntStream</code>, not a boxed <code>Stream&lt;Integer&gt;</code> — worth remembering even though the transcript doesn't dwell on the performance angle explicitly.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation & Examples (The "How")</h2>
+            
+            <h3>Real-World Use Cases</h3>
+            <ol>
+                <li><strong>ETL/reporting pipelines over domain objects</strong> — exactly the book-cataloguing shape shown here: filtering a large in-memory or paginated dataset (orders, transactions, log entries) by a business predicate, projecting down to only the fields a report needs (<code>map</code>), sorting, and grouping into a <code>Map&lt;Category, List&lt;T&gt;&gt;</code> for downstream aggregation or display — a near-universal pattern in backend reporting/dashboard endpoints.</li>
+                <li><strong>Log-file and large-text-file processing</strong> — the <code>Files.lines(Path)</code> pattern shown here is the standard idiom for scanning multi-gigabyte log files for lines matching a pattern (error codes, specific users, date ranges) without loading the entire file into heap memory, since each line is pulled and discarded lazily rather than materialized all at once.</li>
+            </ol>
+
+            <h3>Complete Code Implementation</h3>
+            <p>A slightly hardened version of the file-processing example, incorporating proper resource cleanup the transcript's demo glossed over:</p>
+
+<pre><code>import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class NameFileProcessor {
+
+    /**
+     * Reads a newline-delimited file of names and returns those starting
+     * with the given prefix, case-insensitively.
+     */
+    public static List&lt;String&gt; namesStartingWith(Path file, String prefix) throws IOException {
+        // try-with-resources: Files.lines() returns a Stream that holds an
+        // open file handle underneath — it MUST be closed even on the happy
+        // path, and especially on exception, or the file descriptor leaks.
+        try (var lines = Files.lines(file)) {
+            return lines
+                .map(String::trim)                     // defend against stray whitespace/CRLF
+                .filter(name -&gt; !name.isEmpty())        // skip blank lines
+                .filter(name -&gt; name.regionMatches(true, 0, prefix, 0, prefix.length()))
+                .collect(Collectors.toList());
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        Path namesFile = Path.of("names.txt");
+        List&lt;String&gt; result = namesStartingWith(namesFile, "S");
+        result.forEach(System.out::println);
+    }
+}</code></pre>
+
+            <p><strong>Why these changes matter at a senior level:</strong></p>
+            <ul>
+                <li><code>try (var lines = Files.lines(file))</code> — the transcript's demo never closes the stream <code>Files.lines</code> returns. Unlike an in-memory <code>List.stream()</code>, a <strong>file-backed stream holds a live OS file handle</strong>, and forgetting to close it is a genuine resource leak (exhausted file descriptors under sustained load), not just a style nitpick. This is the file-I/O-stream analogue of the "always shut down your <code>ExecutorService</code>" lesson from the Fork-Join section.</li>
+                <li><code>.filter(name -&gt; !name.isEmpty())</code> and <code>.map(String::trim)</code> — defensive handling for blank lines or trailing whitespace/line-endings that real files (especially ones edited across OSes) commonly contain, which the classroom's hand-typed demo file conveniently didn't have.</li>
+                <li><code>regionMatches(true, ...)</code> instead of <code>startsWith</code> — case-insensitive prefix matching, since "starts with capital S" as literally demonstrated in the lecture is a narrower, more fragile check than most real name-search use cases actually want.</li>
+            </ul>
+
+            <h3>Testing Concurrent Code</h3>
+            <p>Streams themselves aren't inherently concurrent constructs (sequential streams execute single-threaded, in the calling thread) — so ordinary unit testing applies: assert the collected <code>List</code>/<code>Map</code> result against expected values for a range of inputs, including edge cases the transcript didn't test (an empty source list, a source with only one matching element, a file with blank lines or Windows-style line endings). Testing the <em>parallel</em> stream variants (coming in the next lecture) will need the same discipline already established in the Fork-Join section — cross-checking sequential vs. parallel results on identical input, and being alert to any shared mutable state accidentally captured in a lambda passed to <code>forEach</code>/<code>map</code> (which would reintroduce exactly the kind of race condition the earlier sections spent so much time on).</p>
+
+            <hr>
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture, and Performance (The "Why")</h2>
+            
+            <h3>Performance Implications</h3>
+            <ul>
+                <li><strong>Laziness avoids wasted work structurally, not just theoretically.</strong> Because <code>filter</code>→<code>map</code>→<code>sorted</code> etc. are only evaluated element-by-element at terminal-operation time, a pipeline that includes <code>limit(n)</code> downstream can, once formally covered (short-circuiting), avoid processing the entire source at all — this is fundamentally different from an imperative approach of "filter into a temp list, then map that whole temp list, then sort the whole thing," which the equivalent hand-written loops in this same transcript implicitly do.</li>
+                <li><strong>Avoiding intermediate collection materialization reduces GC churn</strong> on long pipelines — a naive hand-coded equivalent (<code>filter</code> into a new <code>ArrayList</code>, then <code>map</code> that whole list into another new <code>ArrayList</code>, then sort that) allocates a full intermediate collection at every stage; a fused stream pipeline processes one element through every stage before moving to the next, avoiding those intermediate <code>O(N)</code> allocations entirely.</li>
+                <li><strong><code>IntStream</code>/<code>LongStream</code>/<code>DoubleStream</code> avoid autoboxing overhead</strong> on numeric-heavy pipelines versus a general <code>Stream&lt;Integer&gt;</code> — meaningfully reduces both CPU cost (boxing/unboxing) and heap allocation (each boxed <code>Integer</code> is a separate object) on large numeric datasets.</li>
+                <li><strong>Internal iteration is a prerequisite for safe, transparent parallelization</strong> (explicitly foreshadowed, formally covered next lecture) — this is the deep architectural payoff of everything in this section: because the Stream library, not your code, controls traversal order and splitting, it can safely fan work out across a <code>ForkJoinPool.commonPool()</code> (the exact same pool from the previous section) without you writing any explicit <code>fork()</code>/<code>join()</code> calls yourself.</li>
+            </ul>
+
+            <h3>Tradeoff Analysis Matrix: External Iteration vs. Sequential Stream vs. (upcoming) Parallel Stream</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Criteria</th>
+                        <th>External iteration (<code>Iterator</code>/for-loop)</th>
+                        <th>Sequential Stream</th>
+                        <th>Parallel Stream <em>(preview — formal lecture next)</em></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Throughput (single-core, simple ops)</td>
+                        <td>Comparable, sometimes marginally faster (less abstraction overhead)</td>
+                        <td>Comparable — pipeline fusion offsets lambda/functional-interface overhead</td>
+                        <td>Better only at sufficient data size, exactly as the Fork-Join section demonstrated</td>
+                    </tr>
+                    <tr>
+                        <td>Memory-locality optimization</td>
+                        <td>None — caller-driven, no reordering possible</td>
+                        <td>Possible — library controls traversal</td>
+                        <td>Possible, plus cross-thread chunking</td>
+                    </tr>
+                    <tr>
+                        <td>Parallelization</td>
+                        <td>Requires manual <code>Thread</code>/Fork-Join work (everything from prior sections)</td>
+                        <td>Not automatic — must explicitly request <code>.parallelStream()</code></td>
+                        <td>Automatic once requested, but subject to the same threshold/overhead caveats already learned</td>
+                    </tr>
+                    <tr>
+                        <td>Ease of use / Risk</td>
+                        <td>More boilerplate; low risk of stream-specific gotchas (no single-use restriction)</td>
+                        <td>Concise; risk = the single-use-stream gotcha and accidental multiple terminal-op calls</td>
+                        <td>Concise; risk = all Fork-Join-section pitfalls (shared mutable state in lambdas, blocking calls starving the common pool) resurface transparently</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Common Pitfalls (Senior Level)</h3>
+            <ul>
+                <li><strong>Reusing an already-consumed stream</strong> (<code>IllegalStateException</code>) — the transcript's own demonstrated gotcha; the fix is architectural, not a patch: never store a <code>Stream</code> reference across multiple terminal operations, always derive a fresh stream from the source collection at the point of use.</li>
+                <li><strong>Forgetting to close file-backed (or other resource-backed) streams</strong> — <code>Files.lines(Path)</code> is the textbook example; unlike an in-memory collection's <code>.stream()</code>, this variant needs <code>try-with-resources</code> because it wraps a live OS resource, and the transcript's demo omits this (acceptable in a classroom throwaway script, not in production code).</li>
+                <li><strong>Mixing up the order of <code>sorted</code>/<code>map</code> and getting a technically-valid-but-wrong result</strong> — sorting after mapping down to a projected field (e.g., sorting titles alphabetically) versus sorting on the original object's field (e.g., page count) produces silently different, non-erroring results — a correctness pitfall with no compiler or runtime signal, only caught by checking output against expectations, exactly the "silent" category of pitfall flagged in the Fork-Join threshold-tuning discussion.</li>
+                <li><strong>Capturing mutable state inside a <code>forEach</code>/<code>map</code> lambda</strong> — nothing in this section's examples does this, but it's the natural next mistake once a person starts writing their own pipelines: a lambda that increments some shared external counter or appends to a shared non-thread-safe collection works fine sequentially but becomes a race condition the moment <code>.parallelStream()</code> is introduced (next lecture) — an especially dangerous pitfall precisely <em>because</em> internal iteration hides the parallelism from the code's surface appearance.</li>
+            </ul>
+
+            <h3>Architectural Impact</h3>
+            <ul>
+                <li>Adopting Stream API pipelines as the default style for collection processing pushes a codebase toward more declarative, composable data-transformation code — easier to reason about and test in isolation (each stage is a pure function of its input) compared to hand-rolled loops with mutable accumulator variables, but it does trade off some debuggability (stepping through a fused pipeline in a debugger is less intuitive than stepping through an explicit loop).</li>
+                <li>The laziness/on-demand model is what makes streams viable for <strong>representing unbounded or very large sequences</strong> (the "infinite primes" example, and by extension, unbounded sensor/event feeds) in a way a <code>Collection</code>-based design fundamentally cannot — this has real architectural implications for designing APIs around data of unknown or effectively-infinite size (paginated API responses, event streams, generator-style data sources).</li>
+                <li>Internal iteration's parallelization-readiness is the reason many teams adopt "stream-first" style for CPU-bound batch transformations even when <em>not</em> immediately parallelizing — it keeps the door open to add <code>.parallelStream()</code> later with a one-word change, versus having to substantially rewrite an external-iteration-based implementation from scratch to parallelize it (as this whole course's earlier sections demonstrate was necessary before Fork-Join/streams existed).</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: What is the fundamental difference between a <code>Collection</code> and a <code>Stream</code>, beyond just "one has more methods"?</strong><br>
+            A: A <code>Collection</code> is a data structure focused on storage — it holds a complete, already-computed set of elements in memory, can be traversed repeatedly, and generally requires the full dataset to exist before use. A <code>Stream</code> is a computation abstraction — it represents a (possibly lazily-computed, possibly unbounded) sequence of elements produced on demand, can only be traversed once per <code>Stream</code> object, and is built around composable filter/map/reduce-style operations rather than storage and random access.</p>
+
+            <p><strong>Q2: What's the difference between an intermediate and a terminal operation, and how would you recognize which is which without memorizing a list?</strong><br>
+            A: Intermediate operations (<code>filter</code>, <code>map</code>, <code>sorted</code>, <code>limit</code>) return another <code>Stream</code>, which means they can be chained together and none of them actually executes anything by itself — evaluation is deferred. Terminal operations (<code>forEach</code>, <code>collect</code>, <code>sum</code>) return a concrete result (a scalar, a collection, or <code>void</code>) and are what actually triggers the whole pipeline to run. The quick heuristic: if the return type is <code>Stream&lt;T&gt;</code> (or a primitive stream type), it's intermediate; anything else is terminal.</p>
+
+            <p><strong>Q3: Why does calling a terminal operation twice on the same <code>Stream</code> object throw <code>IllegalStateException</code>, and what should you do instead?</strong><br>
+            A: A <code>Stream</code> object represents a single, one-time traversal plan bound to a source — once a terminal operation has pulled elements through the pipeline, that <code>Stream</code> instance is considered consumed/closed, and Java enforces this explicitly rather than silently returning empty or stale results. The correct fix is to call <code>.stream()</code> (or whichever source method produces a fresh <code>Stream</code>) again each time you need to traverse the same underlying data — the source collection itself remains fully reusable; it's the <code>Stream</code> wrapper object that isn't.</p>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: Given a <code>List&lt;Book&gt;</code>, write (or explain) a pipeline that returns just the titles of books over 500 pages, sorted by title, as a <code>List&lt;String&gt;</code> — and explain why the order of operations you chose matters.</strong><br>
+            A: <code>books.stream().filter(b -&gt; b.getPages() &gt; 500).sorted(Comparator.comparing(Book::getTitle)).map(Book::getTitle).collect(Collectors.toList())</code>. Order matters here because <code>sorted</code> must run while elements are still full <code>Book</code> objects so the comparator can access <code>getTitle()</code> meaningfully as a natural extension of the object's identity — though in this specific case sorting on the title works whether you map first or sort first (since you're sorting on the same field you eventually project), the general pattern of "sort before you throw away the fields you might need to sort by" is the safer default, and is exactly the point the transcript's page-count-sort-then-title-map example illustrates.</p>
+
+            <p><strong>Q5: Why is internal iteration described as a prerequisite for the Stream API's parallelization capabilities, rather than parallelization just being "added on top of" external iteration?</strong><br>
+            A: External iteration puts the calling code in control of exactly when and in what order <code>next()</code> is called — the library backing the collection has zero visibility into or control over that traversal, so it cannot safely decide to split the work across threads (doing so would require the caller itself to coordinate threads, locks, and joins — exactly the manual work covered in the earlier parallelization sections of this course). Internal iteration inverts control: the Stream library itself decides how to traverse and apply operations, which means it — not your code — can choose to split the source into chunks and farm them out to a thread pool (specifically the Fork-Join common pool) transparently, without your pipeline code changing at all beyond calling <code>.parallelStream()</code>.</p>
+
+            <p><strong>Q6: The instructor's file-processing demo doesn't close the <code>Stream</code> returned by <code>Files.lines()</code>. Why is that a real bug rather than just a style issue, and how do you fix it?</strong><br>
+            A: <code>Files.lines(Path)</code> opens and holds a live underlying file handle/channel for the duration you're reading from the stream — this is fundamentally different from an in-memory <code>List.stream()</code>, which wraps no external resource at all. Failing to close it leaks a file descriptor; under sustained or repeated use (e.g., inside a loop processing many files, or a long-running service), this can exhaust the process's available file descriptors and start causing unrelated I/O failures elsewhere in the application. The fix is <code>try (var lines = Files.lines(path)) { ... }</code> — try-with-resources, since <code>Stream</code> implements <code>AutoCloseable</code> precisely to support resource-backed sources like this.</p>
+
+            <h3>Advanced</h3>
+            <p><strong>Q7: The transcript claims streams let you "find all prime numbers" where a collection-based approach would require "an infinite loop." Precisely what property of streams makes this true, and what's the necessary companion operation (not yet formally covered) that actually makes such a pipeline terminate with a usable result?</strong><br>
+            A: The property is laziness combined with on-demand element computation — an infinite <code>Stream</code> (e.g., built from <code>Stream.iterate</code> over successive candidate numbers, filtered for primality) is a valid, constructible object because no attempt is made to compute <em>all</em> its elements up front; elements are only generated as they're pulled through the pipeline by whatever terminal operation is driving it. However, an infinite stream by itself never terminates just from <code>forEach</code> or <code>collect</code> — you need a <strong>short-circuiting operation</strong> (like <code>limit(n)</code>, or <code>findFirst()</code>) somewhere in the pipeline to bound how many elements actually get pulled and force the pipeline to stop; without one, even a stream-based approach to "all primes" would run forever, just as the collection-based version would, only with a more subtle failure mode (this is exactly why the course has a dedicated upcoming lecture on short-circuiting and loop fusion).</p>
+
+            <p><strong>Q8: Explain, at the bytecode/JVM level, why lambda expressions like <code>x -&gt; System.out.println(x)</code> are generally cheaper than the anonymous inner classes they conceptually replace, and where the actual class generation still happens.</strong><br>
+            A: A traditional anonymous inner class implementing a functional interface is compiled into a full separate <code>.class</code> file at compile time, loaded and instantiated like any other class, with its own constant pool entries, potential outer-class reference, etc. A lambda expression, by contrast, is compiled down to an <code>invokedynamic</code> bytecode instruction referencing a bootstrap method (<code>LambdaMetafactory</code>) — the actual implementing class is synthesized lazily, once, the first time that particular lambda call site is executed at runtime, and the JVM can share/optimize this generation more aggressively than a compile-time-fixed anonymous class. The net effect is typically lower class-loading overhead and smaller compiled artifact size, though each unique lambda expression in source code still ultimately results in its own generated implementation class at runtime — the savings are in <em>how and when</em> that class is produced and loaded, not in eliminating class generation altogether.</p>
+
+            <p><strong>Q9: A junior engineer refactors an external-iteration loop that appends to a shared <code>ArrayList</code> into a stream pipeline using <code>.forEach(item -&gt; sharedList.add(transform(item)))</code>, and later changes <code>.stream()</code> to <code>.parallelStream()</code> for "a quick performance win." What goes wrong, and how does this connect back to concepts from the Fork-Join section?</strong><br>
+            A: <code>ArrayList</code> is not thread-safe, and a <code>forEach</code> lambda that mutates a shared, non-thread-safe collection works by accident under a sequential stream (single thread, no concurrent access) but becomes a genuine data race the moment <code>.parallelStream()</code> fans that same lambda out across multiple <code>ForkJoinPool</code> worker threads — concurrent, unsynchronized <code>add()</code> calls on an <code>ArrayList</code> can silently corrupt its internal array state or throw <code>ConcurrentModificationException</code>/<code>ArrayIndexOutOfBoundsException</code> intermittently, exactly the class of shared-mutable-state bug the manual-threading sections of this course spent significant time on. This connects directly to the "capturing mutable state inside a <code>forEach</code>/<code>map</code> lambda" pitfall: the fix is to avoid side-effecting lambdas altogether and instead use the Stream API's own thread-safe combining terminal operations (<code>collect(Collectors.toList())</code>, or <code>Collectors.toConcurrentMap</code> for parallel-safe map accumulation) — the same "let the framework handle combination, don't hand-roll shared mutable accumulation" lesson that Fork-Join's <code>join()</code>-based combine step and the earlier hand-rolled parallel-sum implementation already taught, just resurfacing in stream form.</p>
+
+            <hr>
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <ul>
+                <li>I can explain the source → intermediate → terminal pipeline shape from memory and correctly classify any given stream method into one of those three roles without needing to look it up.</li>
+                <li>I can explain precisely why laziness and on-demand computation let streams represent unbounded sequences that an eagerly-built collection cannot, and identify that a short-circuiting operation is still needed to make such a pipeline actually terminate.</li>
+                <li>I can explain the JVM-level reason a <code>Stream</code> object can only be consumed once, and correctly restructure code that mistakenly tries to reuse one.</li>
+                <li>I can articulate why internal iteration (not just "streams are new syntax") is the specific architectural property that makes safe, transparent parallelization possible, connecting it back to the manual thread-coordination work from earlier in the course.</li>
+                <li>I can identify and fix a missing <code>try-with-resources</code> on a resource-backed stream like <code>Files.lines(Path)</code>, and explain why this differs from an in-memory collection's <code>.stream()</code>.</li>
+                <li>I can spot a stream pipeline where operation ordering (e.g., <code>sorted</code> before vs. after <code>map</code>) silently changes the result without throwing any error, and reason about the correct order for a given task.</li>
+                <li>I can identify a shared-mutable-state bug hiding inside a <code>forEach</code>/<code>map</code> lambda that would only manifest once the stream is switched from sequential to parallel, and connect that failure mode back to the Fork-Join/manual-threading concepts from earlier sections.</li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
