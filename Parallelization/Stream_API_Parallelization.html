@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream API Parallelization</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            color: var(--heading-color);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Context & Scope</a></li>
+            <li><a href="#core-concept">1. Core Concept (Elevator Pitch)</a></li>
+            <li><a href="#course-content">2. Course Content (The "What")</a></li>
+            <li><a href="#practical-notes">3. Practical Notes</a></li>
+            <li><a href="#tradeoffs">4. Tradeoffs (The "Why")</a></li>
+            <li><a href="#interview-questions">5. Interview Q&A</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Multithreading: Stream API Parallelization</h1>
+                <h2 style="margin-top: -10px; margin-bottom: 0.5rem;"><code>.parallel()</code>, Fork-Join Under the Hood, and When It Actually Helps</h2>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: 0; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                
+                <p><strong>Course position:</strong> <em>Stream API</em> section, final lectures — Parallelization examples #1 (prime counting), #2 (parallel file I/O), #3 (summing via <code>LongStream.reduce</code>). This closes out the Stream API section (Quiz next).</p>
+                <p><strong>Already known:</strong> Full Stream API fundamentals + collectors (<code>groupingBy</code>/<code>partitioningBy</code>), plus the entire Fork-Join Framework section.</p>
+                <p><strong>Not yet covered:</strong> Virtual threads, <code>CompletableFuture</code>, structured concurrency — up next per the syllabus.</p>
+                
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept (Elevator Pitch)</h2>
+            
+            <div class="highlight-box">
+                <p><strong>One-sentence definition:</strong> Calling <code>.parallel()</code> on a stream is a <em>request</em>, not a guarantee — it hands the pipeline to the shared <code>ForkJoinPool.commonPool()</code> (the exact framework from the previous section), which only yields a real speedup when the source can be split evenly and the per-element work is large enough to outweigh splitting/coordination overhead.</p>
+            </div>
+
+            <p><strong>Analogy:</strong> It's like changing a form from "one clerk handles the whole line" to "any free clerk can take the next customer" — the office runs faster only if the queue is long enough and each customer takes real time; for a 3-person queue, fetching extra clerks costs more than it saves.</p>
+
+            <p><strong>JVM view:</strong> <code>.parallel()</code> doesn't spawn new threads itself — it flags the pipeline so the terminal operation's execution engine spliterates the source and submits sub-tasks to the common <code>ForkJoinPool</code>, the same pool and work-stealing mechanism covered in the Fork-Join section, just invoked implicitly instead of via explicit <code>RecursiveTask</code>s.</p>
+
+            <hr>
+
+            <h2 id="course-content">2. Course Content (The "What")</h2>
+            
+            <p><strong>Prime-counting (<code>IntStream.range(2, N).filter(isPrime).count()</code>):</strong> sequential ~16s vs. parallel ~2s for ~21M candidates — an ~8x speedup. <code>count()</code> after <code>filter</code> is a fully parallelizable reduction (no ordering dependency), so <code>.parallel()</code> before <code>.filter()</code> works cleanly:</p>
+<pre><code>long primeCount = IntStream.range(2, Integer.MAX_VALUE / 100)
+    .parallel()
+    .filter(MathUtils::isPrime)
+    .count();</code></pre>
+
+            <p><strong>Parallel file-writing (100,000 <code>Person</code> objects, one file each):</strong> sequential ~7s vs. parallel ~0.68s — ~10x. Same one-line change:</p>
+<pre><code>people.stream().forEach(ParallelSaveOperation::save);          // sequential
+people.parallelStream().forEach(ParallelSaveOperation::save);  // parallel</code></pre>
+            <p>Called out explicitly: <strong>I/O-bound work is a strong parallelization candidate</strong> — each <code>save()</code> blocks on disk I/O, so overlapping many blocked calls across threads helps more than pure-CPU prime counting does per element, even though both showed strong speedups here.</p>
+
+            <p><strong>Summing via <code>LongStream.reduce</code>:</strong></p>
+<pre><code>long sum = LongStream.rangeClosed(1, n).reduce(0, Long::sum);              // sequential
+long parallelSum = LongStream.rangeClosed(1, n).parallel().reduce(0, Long::sum); // parallel</code></pre>
+            <p>At 1–2 billion elements, parallel wins ~4–5x — directly recalling the hand-rolled parallel-sum lecture from the very first parallelization section, now expressed in one line.</p>
+
+            <div class="highlight-box">
+                <p><strong>Explicit warning from the transcript:</strong> <code>.parallel()</code> is <em>not a guarantee</em> — some pipelines (e.g., ones using <code>findFirst()</code> instead of <code>findAny()</code>) are inherently order-dependent/sequential and won't benefit no matter how many cores are available, foreshadowing (not yet formally covered) the distinction between <code>findFirst</code>/<code>findAny</code>.</p>
+            </div>
+
+            <hr>
+
+            <h2 id="practical-notes">3. Practical Notes</h2>
+            
+            <ul>
+                <li><strong>Always benchmark, don't assume</strong> — exactly the same lesson as the manual-threading and Fork-Join sections: small N, order-dependent operations, or non-splittable sources (e.g., <code>LinkedList</code>, which splits poorly compared to an array-backed <code>ArrayList</code>/<code>IntStream.range</code>) can make <code>.parallel()</code> a pessimization.</li>
+                <li><strong>I/O-bound <code>parallelStream()</code> work should not share the common pool with other CPU-bound parallel-stream code</strong> in the same application — the identical common-pool-starvation risk flagged in the Fork-Join notes applies here, just now hidden behind the one-word <code>.parallel()</code> call instead of explicit task code.</li>
+                <li><strong>Testing:</strong> cross-check sequential vs. parallel results on identical input (as the course itself does for both the prime count and the sum), and avoid any shared mutable state inside the lambda passed to <code>forEach</code>/<code>filter</code>/<code>map</code> — the same warning as before, now doubly relevant since <code>.parallel()</code> can be added to <em>any</em> existing pipeline with no visible code signal that concurrency has been introduced.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="tradeoffs">4. Tradeoffs (The "Why")</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Workload</th>
+                        <th>Speedup shown</th>
+                        <th>Why</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Prime counting (CPU-bound, 21M ints)</td>
+                        <td>~8x</td>
+                        <td>Pure computation per element, easily split, no I/O wait</td>
+                    </tr>
+                    <tr>
+                        <td>File writing (I/O-bound, 100K files)</td>
+                        <td>~10x</td>
+                        <td>Threads overlap while waiting on disk, not just CPU</td>
+                    </tr>
+                    <tr>
+                        <td>Sum reduction (CPU-bound, 1–2B longs)</td>
+                        <td>~4–5x</td>
+                        <td>Simple per-element op, overhead amortizes only at huge N</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>Same pitfalls as Fork-Join carry over unchanged: order-dependent terminal ops don't parallelize; blocking calls inside a parallel-stream lambda can starve the shared common pool; small inputs make <code>.parallel()</code> a net loss due to splitting/scheduling overhead.</p>
+
+            <hr>
+
+            <h2 id="interview-questions">5. Interview Q&A</h2>
+            
+            <p><strong>Basic:</strong> <em>Does calling <code>.parallel()</code> guarantee parallel execution?</em> No — it's a hint; whether real parallel execution happens (and helps) depends on the source's splittability and whether the terminal operation is order-independent.</p>
+
+            <p><strong>Intermediate:</strong> <em>Why did the file-saving example show a bigger relative speedup than pure prime-counting?</em> Because file I/O involves blocking wait time per element that multiple threads can overlap, not just CPU work — parallelism hides I/O latency in addition to spreading computation.</p>
+
+            <p><strong>Advanced:</strong> <em>Why might <code>findFirst()</code> prevent effective parallelization while <code>findAny()</code> wouldn't?</em> <code>findFirst()</code> must respect encounter order — the implementation still has to determine which qualifying element truly comes first across all parallel chunks, which reintroduces a sequential dependency; <code>findAny()</code> has no such constraint and can return as soon as any thread finds a match, making it far more parallel-friendly.</p>
+
+            <hr>
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <ul>
+                <li>I can add <code>.parallel()</code>/<code>parallelStream()</code> to an existing pipeline and explain that it's a request, not a guarantee, backed by the common <code>ForkJoinPool</code>.</li>
+                <li>I can identify CPU-bound vs. I/O-bound workloads as both being good parallelization candidates, for different underlying reasons.</li>
+                <li>I know to benchmark rather than assume, and to watch for order-dependent operations (<code>findFirst</code>) or common-pool starvation from mixed I/O/CPU parallel-stream use.</li>
+            </ul>
+
+        </div>
+    </main>
+
+</body>
+</html>
