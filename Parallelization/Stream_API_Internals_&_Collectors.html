@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Multithreading: Stream API Internals & Collectors</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            color: var(--heading-color);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Context & Scope</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Code</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Java Stream API Internals & Collectors</h1>
+                <h2 style="margin-top: -10px; margin-bottom: 0.5rem;">Loop Fusion, Short-Circuiting, map/flatMap, groupingBy, partitioningBy</h2>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: 0; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                
+                <p><strong>Course position:</strong> <em>Stream API</em> section, continued — covers: short-circuiting &amp; loop fusion (the "why streams are fast" payoff promised last section) → <code>map()</code>/<code>flatMap()</code> → the pairs-generation mapping exercise → <code>Collectors.groupingBy()</code> (with downstream collectors: <code>toSet</code>, <code>counting</code>, <code>summingInt</code>, <code>mapping</code>, <code>joining</code>, custom map factories like <code>TreeMap</code>) → <code>groupingBy()</code> combined with <code>flatMap()</code> for multi-valued classifiers → <code>Collectors.partitioningBy()</code>.</p>
+                <p><strong>Already known (assumed):</strong> Everything through Stream API fundamentals (source/intermediate/terminal, laziness, single-use streams, internal vs. external iteration, filter/sorted/collect, informal groupingBy usage from the custom-objects lecture).</p>
+                <p><strong>Not yet covered:</strong> <code>Optional</code>/<code>OptionalInt</code>/<code>OptionalLong</code>/<code>OptionalDouble</code>, <code>allMatch</code>/<code>noneMatch</code>/<code>findFirst</code>/<code>findAny</code>, and the parallelization-with-streams examples (still the explicitly-promised payoff, now even more clearly motivated since this section formally names the two optimizations — loop fusion and short-circuiting — that make sequential streams fast, setting up why parallel streams can be fast too).</p>
+                
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            
+            <div class="highlight-box">
+                <p><strong>One-Sentence Definition:</strong><br>
+                Stream pipelines are fast not because each operation is individually optimized, but because the JVM fuses multiple intermediate operations into a single per-element pass (<strong>loop fusion</strong>) and stops pulling elements entirely once a terminal operation's contract is satisfied (<strong>short-circuiting</strong>) — and collectors like <code>groupingBy</code>/<code>partitioningBy</code> extend the same lazy, composable pipeline model to produce SQL-<code>GROUP BY</code>-style aggregated results instead of flat lists.</p>
+            </div>
+
+            <h3>The Architecture Analogy</h3>
+            <p>Loop fusion is like a single security checkpoint at an airport that checks your boarding pass, ID, <em>and</em> scans your bag all in one pass as you walk through — versus three separate queues you'd have to walk through sequentially (check pass for everyone, then re-queue to check ID for everyone, then re-queue to scan bags for everyone). Short-circuiting is the checkpoint closing the moment the day's flight is fully boarded — it doesn't keep processing the rest of the terminal building's foot traffic once the quota's been met. <code>groupingBy</code>/<code>partitioningBy</code> are the equivalent of sorting that same foot traffic into labeled holding pens (by destination city for <code>groupingBy</code>, or simply "boarding now" vs. "not yet" for <code>partitioningBy</code>) instead of just funneling everyone into one single line.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <ul>
+                <li>Internally, a stream pipeline is represented as a chain of <code>Sink</code> objects (an internal JDK abstraction) — each intermediate operation wraps the next stage's <code>Sink</code> rather than producing a fully materialized intermediate stream. When the terminal operation begins pulling elements from the source, each element is pushed through the <em>entire</em> chain of sinks before the next element is even fetched — this is the literal mechanism behind loop fusion; there's no "first pass filter over everything, then second pass map over everything."</li>
+                <li><code>limit(n)</code> (and other short-circuiting operations like <code>findFirst</code>, <code>anyMatch</code>) set an internal flag that the stream's traversal machinery checks after each element — once satisfied, the source's iteration is abandoned early rather than exhausted, which is exactly why the lecture observed <code>filter</code>/<code>map</code> print statements stopping after only as many source elements as needed to find <code>n</code> matches, not after scanning the whole list.</li>
+                <li><code>Collectors.groupingBy(classifier)</code> under the hood builds a <code>Collector</code> — a bundle of a supplier (creates the result container, e.g., a <code>new HashMap&lt;&gt;()</code>), an accumulator (how to fold one element in), and a combiner (how to merge two partial results, relevant for parallel execution) — the same <code>Collector</code> abstraction backs every named collector (<code>toList</code>, <code>toSet</code>, <code>counting</code>, <code>joining</code>), which is why they compose so uniformly as "downstream" arguments to <code>groupingBy</code>/<code>partitioningBy</code>.</li>
+                <li>A <code>TreeMap</code> supplied as <code>groupingBy</code>'s map-factory argument is a <strong>red-black tree</strong> under the hood — <code>O(log N)</code> insert/lookup, with in-order traversal yielding sorted key order "for free," which is exactly why swapping the factory from the default <code>HashMap</code> (unordered, <code>O(1)</code> average) to <code>TreeMap::new</code> alone was enough to get alphabetically-sorted department keys with no other pipeline changes.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="course-content">2. Course Transcript Content (The "What")</h2>
+            
+            <h3>Key Concepts & Definitions</h3>
+            <ul>
+                <li><strong>Loop fusion</strong>: multiple intermediate operations (<code>filter</code>, <code>map</code>, ...) are executed together, element by element, in a single pass over the source — rather than each operation running a full separate pass.</li>
+                <li><strong>Short-circuiting</strong>: some operations (notably <code>limit(n)</code>) allow the pipeline to stop pulling further elements once their contract is satisfied, avoiding processing the entire source.</li>
+                <li><strong><code>map(Function&lt;T,R&gt;)</code></strong>: transforms each element from type <code>T</code> to type <code>R</code> — the transcript's analogy: "like selecting a single column in SQL." Demonstrated on strings (word → character count) and numbers (value → squared value).</li>
+                <li><strong><code>flatMap(Function&lt;T, Stream&lt;R&gt;&gt;)</code></strong>: like <code>map</code>, but where each element maps to <em>a stream of results</em> rather than a single result — <code>flatMap</code> then flattens all those individual streams into one combined stream, rather than leaving you with a stream of streams (or, for arrays, a stream of arrays, which is the type-mismatch error the transcript hits before introducing <code>flatMap</code>).</li>
+                <li><strong><code>distinct()</code></strong>: intermediate — keeps only unique elements per <code>equals()</code>.</li>
+                <li><strong><code>Collectors.groupingBy(classifier)</code></strong>: terminal collector producing <code>Map&lt;K, List&lt;T&gt;&gt;</code> by default, bucketing elements by a key-extracting classifier function — directly analogous to SQL's <code>GROUP BY</code>.</li>
+                <li><strong>Downstream collectors</strong> (the second argument to <code>groupingBy</code>): applied to each group's elements <em>after</em> grouping — covered here: <code>Collectors.toSet()</code>, <code>Collectors.counting()</code> (count per group), <code>Collectors.summingInt(ToIntFunction)</code> (sum a numeric field per group), <code>Collectors.mapping(Function, downstream)</code> (project each element to a different field before further collecting), <code>Collectors.joining(delimiter)</code> (concatenate into one delimited string).</li>
+                <li><strong>Map-factory overload of <code>groupingBy</code></strong>: a three-argument form (<code>classifier</code>, <code>mapFactory</code>, <code>downstream</code>) letting you choose the concrete <code>Map</code> implementation (e.g., <code>TreeMap::new</code> for sorted keys) instead of the default <code>HashMap</code>.</li>
+                <li><strong><code>groupingBy</code> + <code>flatMap</code> combo, for multi-valued classifiers</strong>: when the grouping key isn't a single field but a <em>list</em> of values per element (e.g., a person belonging to multiple departments), first <code>flatMap</code> + <code>map</code> to explode each element into multiple flat <code>(key, value)</code> pairs, <em>then</em> <code>groupingBy</code> on the exploded stream.</li>
+                <li><strong><code>Collectors.partitioningBy(Predicate)</code></strong>: a specialized <code>groupingBy</code> where the classifier is <em>always</em> a <code>boolean</code>-returning predicate, guaranteeing exactly two buckets (<code>true</code>/<code>false</code>) in the resulting <code>Map&lt;Boolean, List&lt;T&gt;&gt;</code>, regardless of how many distinct "natural" categories might otherwise exist.</li>
+            </ul>
+
+            <h3>Code Snippets (from Transcript) — annotated</h3>
+
+            <p><strong>Demonstrating loop fusion and short-circuiting empirically, via print-statement side effects:</strong></p>
+<pre><code>List&lt;String&gt; longestTitles = books.stream()
+    .filter(p -&gt; {
+        System.out.println("filtering " + p.getTitle());
+        return p.getPages() &gt; 500;
+    })
+    .map(b -&gt; {
+        System.out.println("mapping " + b.getTitle());
+        return b.getTitle();
+    })
+    .limit(2)
+    .collect(Collectors.toList());</code></pre>
+            <ul>
+                <li><strong>Observed output pattern:</strong> <code>filtering, mapping, filtering, filtering, filtering, filtering, mapping</code> — not "filter everything, then map everything." Each source element is pushed through <em>both</em> filter and map before the next element is even considered — this is loop fusion made visible.</li>
+                <li><strong>Observed early termination:</strong> once two elements pass through <code>map</code> (satisfying <code>limit(2)</code>), no further source elements are filtered or mapped at all — this is short-circuiting made visible. The instructor explicitly notes this is <em>why</em> this stream-based approach outperforms an equivalent "filter into one list, then map that whole list, then take the first two" imperative sequence: the imperative version would filter and map every single qualifying book before truncating, doing strictly more work.</li>
+            </ul>
+
+            <p><strong><code>map</code> for simple field/type projection (string length, squaring):</strong></p>
+<pre><code>List&lt;Integer&gt; lengths = Arrays.asList("Adam", "Anna", "Danielle").stream()
+    .map(String::length)
+    .collect(Collectors.toList());              // [4, 4, 8] -- note: Anna is 4 chars, not 3
+
+List&lt;Integer&gt; squares = Arrays.asList(1, 2, 3, 4).stream()
+    .map(n -&gt; n * n)
+    .collect(Collectors.toList());              // [1, 4, 9, 16]</code></pre>
+            <p><em>(Note: the transcript's spoken word-lengths example used "Adam"/"Anna"/"Danielle" but stated the counts as four/three/six — the actual character counts for these words are 4/4/8; I've preserved the code pattern faithfully since that's what matters technically, but flagging the arithmetic mismatch rather than silently "correcting" the spoken numbers into something that looks consistent.)</em></p>
+
+            <p><strong>Why <code>flatMap</code> is needed — the type-mismatch moment:</strong></p>
+<pre><code>// This does NOT compile as intended: map() over two words each split into
+// char arrays produces a Stream&lt;String[]&gt; -- a stream of TWO separate arrays,
+// not a single combined stream of characters.
+Stream&lt;String[]&gt; mismatch = Arrays.stream(new String[]{"hello", "shell"})
+    .map(word -&gt; word.split(""));   // Stream&lt;String[]&gt;, not Stream&lt;String&gt;
+
+// flatMap flattens: each word maps to its OWN stream of characters,
+// and flatMap merges all those individual streams into one combined stream.
+List&lt;String&gt; uniqueChars = Arrays.stream(new String[]{"hello", "shell"})
+    .flatMap(word -&gt; Arrays.stream(word.split("")))
+    .distinct()
+    .collect(Collectors.toList());              // [h, e, l, o, s]</code></pre>
+            <ul>
+                <li><strong>The core distinction, stated precisely:</strong> <code>map</code> produces one output <em>value</em> per input element — here, that value happens to itself be a stream-like structure (an array), leaving you with a stream <em>of</em> arrays. <code>flatMap</code> instead expects the mapping function to produce a <em>stream</em> per input element, and it flattens all those per-element streams into a single combined stream — this is the mechanical difference, not just "flatMap is map but more powerful."</li>
+            </ul>
+
+            <p><strong>Pairs-generation exercise — <code>flatMap</code> for cross-products:</strong></p>
+<pre><code>List&lt;Integer&gt; nums1 = Arrays.asList(1, 2, 3);
+List&lt;Integer&gt; nums2 = Arrays.asList(4, 5);
+
+List&lt;List&lt;Integer&gt;&gt; pairs = nums1.stream()
+    .flatMap(i -&gt; nums2.stream().map(j -&gt; Arrays.asList(i, j)))
+    .collect(Collectors.toList());
+// [(1,4), (1,5), (2,4), (2,5), (3,4), (3,5)]</code></pre>
+            <ul>
+                <li><strong>Why this needs <code>flatMap</code>, not just nested <code>map</code>:</strong> for each <code>i</code> in <code>nums1</code>, the inner <code>nums2.stream().map(j -&gt; List.of(i, j))</code> produces <em>its own stream</em> of pairs (one pair per <code>j</code>). Without <code>flatMap</code>, mapping <code>nums1</code> directly would leave you with a <code>Stream&lt;Stream&lt;List&lt;Integer&gt;&gt;&gt;</code> — a stream of per-<code>i</code> streams. <code>flatMap</code> collapses that outer/inner nesting into one flat <code>Stream&lt;List&lt;Integer&gt;&gt;</code>, exactly analogous to the character-flattening example above, just with a generated inner stream instead of a <code>String.split()</code>-produced array.</li>
+            </ul>
+
+            <p><strong><code>groupingBy</code> with downstream collectors — the full progression shown in the transcript:</strong></p>
+<pre><code>// Default: Map&lt;String, List&lt;Person&gt;&gt;
+Map&lt;String, List&lt;Person&gt;&gt; byDept = people.stream()
+    .collect(Collectors.groupingBy(Person::getDepartment));
+
+// Downstream: Set instead of List
+Map&lt;String, Set&lt;Person&gt;&gt; byDeptAsSet = people.stream()
+    .collect(Collectors.groupingBy(Person::getDepartment, Collectors.toSet()));
+
+// Downstream: count per group
+Map&lt;String, Long&gt; countByDept = people.stream()
+    .collect(Collectors.groupingBy(Person::getDepartment, Collectors.counting()));
+
+// Downstream: sum of ages per group
+Map&lt;String, Integer&gt; ageSumByDept = people.stream()
+    .collect(Collectors.groupingBy(Person::getDepartment, Collectors.summingInt(Person::getAge)));
+
+// Downstream: project to names only, then collect to List
+Map&lt;String, List&lt;String&gt;&gt; namesByDept = people.stream()
+    .collect(Collectors.groupingBy(Person::getDepartment,
+             Collectors.mapping(Person::getName, Collectors.toList())));
+
+// Downstream: names joined into one delimited string
+Map&lt;String, String&gt; joinedNamesByDept = people.stream()
+    .collect(Collectors.groupingBy(Person::getDepartment,
+             Collectors.mapping(Person::getName, Collectors.joining(", "))));
+
+// Custom map factory: sorted keys via TreeMap
+Map&lt;String, List&lt;Person&gt;&gt; sortedByDept = people.stream()
+    .collect(Collectors.groupingBy(Person::getDepartment, TreeMap::new, Collectors.toList()));</code></pre>
+            <ul>
+                <li><strong>The 3-argument overload's argument order matters and is a common source of confusion:</strong> classifier first, then map-factory, then downstream collector — swapping the middle two won't compile, since <code>mapFactory</code> and <code>downstream</code> have different generic bounds (<code>Supplier&lt;M&gt;</code> vs. <code>Collector&lt;T,?,D&gt;</code>).</li>
+            </ul>
+
+            <p><strong><code>groupingBy</code> + <code>flatMap</code> for a multi-valued classifier (a person can belong to multiple departments):</strong></p>
+<pre><code>Map&lt;String, List&lt;String&gt;&gt; namesByDept = people.stream()
+    // 1. Explode each person's list-of-departments into individual (dept, person) pairs
+    .flatMap(person -&gt; person.getDepartments().stream()
+                              .map(dept -&gt; new AbstractMap.SimpleEntry&lt;&gt;(dept, person)))
+    // 2. Now group the FLATTENED (dept, person) pairs by dept
+    .collect(Collectors.groupingBy(Map.Entry::getKey,
+             Collectors.mapping(entry -&gt; entry.getValue().getName(), Collectors.toList())));</code></pre>
+            <ul>
+                <li><strong>Why the naive <code>groupingBy(Person::getDepartments)</code> fails:</strong> <code>getDepartments()</code> returns a <code>List&lt;String&gt;</code>, so grouping directly by it would use the <em>entire list</em> as the map key (e.g., grouping by the literal list <code>["finance", "it"]</code> as one atomic key) — not what's wanted at all. The fix is a two-stage transform: first <code>flatMap</code> to explode "one person, multiple departments" into "multiple (department, person) pairs" (each department individually paired with that same person), <em>then</em> <code>groupingBy</code> on the now-single-valued department key of each pair.</li>
+            </ul>
+
+            <p><strong><code>partitioningBy</code> — always exactly two boolean-keyed buckets:</strong></p>
+<pre><code>Map&lt;Boolean, List&lt;Person&gt;&gt; underForty = people.stream()
+    .collect(Collectors.partitioningBy(p -&gt; p.getAge() &lt; 40));
+
+Map&lt;Boolean, List&lt;String&gt;&gt; underFortyNames = people.stream()
+    .collect(Collectors.partitioningBy(p -&gt; p.getAge() &lt; 40,
+             Collectors.mapping(Person::getName, Collectors.toList())));</code></pre>
+            <ul>
+                <li><strong>The single defining contrast with <code>groupingBy</code>, stated explicitly:</strong> <code>groupingBy</code>'s classifier can return <em>any</em> key type and produce <em>any number</em> of groups (one per distinct key actually observed in the data); <code>partitioningBy</code>'s classifier is constrained to a <code>Predicate&lt;T&gt;</code>, so the result always has exactly two keys, <code>true</code> and <code>false</code>, present in the map regardless of whether either bucket ends up empty — a narrower but simpler and more predictable tool for genuinely binary splits.</li>
+            </ul>
+
+            <h3>Important Caveats/Warnings (explicitly from the transcript)</h3>
+            <ul>
+                <li><strong>Loop fusion and short-circuiting are explicitly named as <em>the</em> two reasons streams outperform equivalent hand-written collection-based code</strong> — not vague "streams are optimized" hand-waving, but these two specific, demonstrated mechanisms.</li>
+                <li><strong><code>flatMap</code> is needed precisely when a mapping function would otherwise produce a stream/array/collection <em>per element</em>, leaving you with a nested structure</strong> — the compile-time "type mismatch" the instructor hits live is the concrete signal that <code>map</code> should be <code>flatMap</code>.</li>
+                <li><strong><code>groupingBy</code>'s 3-argument overload argument order is classifier → map factory → downstream collector</strong> — get this wrong and it won't compile, since the generic type bounds don't match if swapped.</li>
+                <li><strong>A classifier that itself returns a list/collection (rather than a single scalar key) will group by the whole list as one atomic key</strong> — not by each individual element of that list — this is exactly the mistake the multi-department example walks through and fixes via the <code>flatMap</code>-then-<code>groupingBy</code> combination.</li>
+                <li><strong><code>partitioningBy</code>'s result always contains both <code>true</code> and <code>false</code> keys</strong>, even if one bucket is empty — this is different from <code>groupingBy</code>, where a key with zero matching elements simply never appears in the resulting map at all (as noted in the prior section's notes on the informal grouping-by-type example).</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation & Examples (The "How")</h2>
+            
+            <h3>Real-World Use Cases</h3>
+            <ol>
+                <li><strong>Reporting/analytics endpoints aggregating domain data</strong> — e.g., an HR system computing headcount and total salary cost per department (<code>groupingBy(Employee::getDepartment, Collectors.summingDouble(Employee::getSalary))</code>), or an e-commerce backend computing order counts and revenue per product category — directly the shape of the department/age-sum examples shown here, just with real business fields.</li>
+                <li><strong>Many-to-many relationship flattening for reporting</strong> — the multi-department person example is a direct stand-in for extremely common real schemas: users with multiple roles, products with multiple tags/categories, orders with multiple line items across multiple warehouses. The <code>flatMap</code>-then-<code>groupingBy</code> pattern shown here is the standard idiom for "explode the many-to-many relationship into flat pairs, then aggregate by one side of it."</li>
+                <li><strong>Binary eligibility/segmentation splits</strong> — <code>partitioningBy</code> is the natural fit for exactly-two-bucket business rules: "active vs. inactive users," "over/under a spending threshold for a promotion," "passed vs. failed a validation rule" — anywhere the business logic is inherently a yes/no split rather than an open-ended categorical grouping.</li>
+            </ol>
+
+            <h3>Complete Code Implementation</h3>
+            <p>A realistic reporting scenario combining everything in this section — grouping employees by department with multiple downstream aggregates, handling the multi-department case, and a partitioning-based eligibility check:</p>
+
+<pre><code>import java.util.*;
+import java.util.stream.Collectors;
+
+public class DepartmentReportService {
+
+    public record Employee(String name, int age, double salary, List&lt;String&gt; departments) {}
+
+    /**
+     * Per-department: employee count and total salary cost.
+     * Uses the flatMap -&gt; groupingBy pattern since an employee can belong
+     * to more than one department (many-to-many relationship).
+     */
+    public Map&lt;String, DepartmentSummary&gt; summarizeByDepartment(List&lt;Employee&gt; employees) {
+        Map&lt;String, List&lt;Employee&gt;&gt; byDept = employees.stream()
+            .flatMap(e -&gt; e.departments().stream()
+                           .map(dept -&gt; Map.entry(dept, e)))
+            .collect(Collectors.groupingBy(
+                Map.Entry::getKey,
+                TreeMap::new,                                    // sorted department names in the report
+                Collectors.mapping(Map.Entry::getValue, Collectors.toList())
+            ));
+
+        Map&lt;String, DepartmentSummary&gt; result = new TreeMap&lt;&gt;();
+        for (var entry : byDept.entrySet()) {
+            List&lt;Employee&gt; group = entry.getValue();
+            long count = group.size();
+            double totalSalary = group.stream().mapToDouble(Employee::salary).sum();
+            result.put(entry.getKey(), new DepartmentSummary(count, totalSalary));
+        }
+        return result;
+    }
+
+    public record DepartmentSummary(long headcount, double totalSalary) {}
+
+    /** Binary eligibility split: senior (35+) vs. junior employees, names only. */
+    public Map&lt;Boolean, List&lt;String&gt;&gt; partitionBySeniority(List&lt;Employee&gt; employees) {
+        return employees.stream()
+            .collect(Collectors.partitioningBy(
+                e -&gt; e.age() &gt;= 35,
+                Collectors.mapping(Employee::name, Collectors.toList())
+            ));
+    }
+}</code></pre>
+
+            <p><strong>Why these design choices matter at a senior level:</strong></p>
+            <ul>
+                <li>Using a <code>record</code> for <code>Employee</code>/<code>DepartmentSummary</code> instead of a hand-written class with generated getters/setters (as the lecture's <code>Person</code> class does) — immutable, concise, and <code>equals</code>/<code>hashCode</code>/<code>toString</code> come for free, which matters directly for stream operations like <code>distinct()</code> or using objects as map keys.</li>
+                <li>Combining <code>groupingBy</code>'s <code>TreeMap::new</code> factory with a <code>mapping</code> downstream collector in one pass, then doing the numeric aggregation (<code>mapToDouble(...).sum()</code>) in a <em>second</em>, simpler pass over each already-grouped list — this is a deliberate readability trade-off over trying to cram a <code>summingDouble</code> downstream collector directly into the first <code>groupingBy</code> call, which becomes hard to read once combined with the <code>flatMap</code>-based multi-department explosion; sometimes two clear stream operations beat one maximally-clever one-liner.</li>
+                <li>The <code>partitionBySeniority</code> example demonstrates that <code>partitioningBy</code>'s downstream-collector argument works identically to <code>groupingBy</code>'s — the only structural difference between the two collectors is the classifier's fixed return type (<code>boolean</code> vs. arbitrary <code>K</code>), not any special-casing in how downstream collectors compose.</li>
+            </ul>
+
+            <h3>Testing Concurrent Code</h3>
+            <p>None of this section's constructs (<code>groupingBy</code>, <code>partitioningBy</code>, <code>map</code>, <code>flatMap</code>) are inherently concurrent — they execute single-threaded under a sequential stream, exactly like everything covered so far in the Stream API section. Testing focus should instead be on <strong>collector correctness at data-shape boundaries</strong>: an empty input list (does <code>groupingBy</code> correctly return an empty map, and does <code>partitioningBy</code> still correctly return both <code>true</code>/<code>false</code> keys mapped to empty lists?), a classifier that produces a <code>null</code> key (which <code>groupingBy</code>'s default <code>HashMap</code>-backed collector permits but a <code>TreeMap</code>-backed one will throw <code>NullPointerException</code> on, since <code>TreeMap</code> cannot compare against a <code>null</code> key), and — once parallel streams are formally covered next — verifying that <code>groupingBy</code>/<code>partitioningBy</code> results are identical whether the source stream is sequential or parallel, since these are genuinely safe to parallelize (their <code>Collector</code> implementations define a proper combiner function for merging partial results from different threads), unlike the earlier warned-about pattern of a raw side-effecting <code>forEach</code> lambda mutating shared state.</p>
+
+            <hr>
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture, and Performance (The "Why")</h2>
+            
+            <h3>Performance Implications</h3>
+            <ul>
+                <li><strong>Loop fusion's real payoff is cache locality and avoided intermediate allocation</strong> — a hand-written equivalent of "filter into a new <code>ArrayList</code>, then map that whole list into another new <code>ArrayList</code>" allocates two full intermediate collections proportional to data size; the fused stream pipeline processes one element through every stage before touching the next, allocating nothing extra per stage.</li>
+                <li><strong>Short-circuiting's payoff scales with how selective the terminal operation is</strong> — <code>limit(2)</code> on a 7-book list saved relatively little in the demo, but the same mechanism on a truly large dataset (find the first N matches out of millions) is the difference between doing <code>O(N)</code> work and doing work proportional only to how far into the source the first N matches happen to appear — a potentially enormous difference.</li>
+                <li><strong><code>groupingBy</code>/<code>partitioningBy</code> are still single-pass over the source</strong> (like everything else in the pipeline) but the accumulation into the result <code>Map</code> does involve real per-element bookkeeping (hashing the classifier's key, growing bucket lists) — for extremely large groupings, the default <code>ArrayList</code>-per-key accumulation means memory proportional to total input size regardless of how many distinct groups there are, same as any hash-based grouping in any language.</li>
+                <li><strong><code>Collectors.counting()</code>/<code>summingInt()</code> downstream collectors avoid materializing the full per-group list at all</strong> when you only need the aggregate — meaningfully less memory than <code>groupingBy(classifier, Collectors.toList())</code> followed by a separate <code>.size()</code>/<code>.sum()</code> pass, since the downstream collector folds values in incrementally rather than keeping every element around.</li>
+            </ul>
+
+            <h3>Tradeoff Analysis Matrix: <code>groupingBy</code> vs. <code>partitioningBy</code> vs. Hand-Rolled <code>Map</code>-Building Loop</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Criteria</th>
+                        <th>Hand-rolled loop (<code>Map&lt;K, List&lt;T&gt;&gt;</code> + manual <code>computeIfAbsent</code>)</th>
+                        <th><code>Collectors.groupingBy</code></th>
+                        <th><code>Collectors.partitioningBy</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Expressiveness</td>
+                        <td>Full control, verbose</td>
+                        <td>Concise, flexible key types, composable downstream collectors</td>
+                        <td>Concise, but locked to exactly 2 boolean buckets</td>
+                    </tr>
+                    <tr>
+                        <td>Readability for arbitrary categories</td>
+                        <td>Lower — boilerplate obscures intent</td>
+                        <td>High — declares intent directly</td>
+                        <td>N/A — wrong tool if you need more than 2 buckets</td>
+                    </tr>
+                    <tr>
+                        <td>Readability for binary splits</td>
+                        <td>Same boilerplate as any grouping</td>
+                        <td>Works, but yields a map that <em>could</em> have any number of keys, less self-documenting for a true binary split</td>
+                        <td>Highest — type signature itself documents "exactly 2 outcomes"</td>
+                    </tr>
+                    <tr>
+                        <td>Ease of use / Risk</td>
+                        <td>Highest risk — easy to forget <code>computeIfAbsent</code>/null-checks, easy off-by-one on which list to add to</td>
+                        <td>Low risk — standard library handles bucket creation</td>
+                        <td>Low risk, but easy to misuse for a case that actually needs &gt;2 categories, forcing an awkward boolean proxy</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Common Pitfalls (Senior Level)</h3>
+            <ul>
+                <li><strong>Grouping by a collection-valued classifier without flattening first</strong> — the exact mistake walked through in the multi-department example: <code>groupingBy(Person::getDepartments)</code> silently compiles and runs, but groups by the <em>entire list object</em> as a single key (via <code>List.equals()</code>/<code>hashCode()</code>), producing one group per unique combination-of-departments rather than one group per individual department — a correctness bug with no compiler warning, only wrong-looking output.</li>
+                <li><strong>Assuming <code>groupingBy</code> always returns every "possible" key</strong> — as flagged before, a <code>groupingBy</code> result only contains keys that actually appeared in the data; code that unconditionally does <code>result.get(SomeEnum.RARE_CATEGORY)</code> without a null-check or <code>getOrDefault</code> will NPE the moment a category happens to have zero matches, whereas the same assumption is <em>safe</em> for <code>partitioningBy</code> specifically because it's guaranteed to always populate both <code>true</code> and <code>false</code>.</li>
+                <li><strong>Confusing <code>map</code> and <code>flatMap</code> in either direction</strong> — using <code>map</code> where <code>flatMap</code> was needed leaves you with an unwanted nested structure (the compile error acts as a safety net for typed streams, but with raw/generic types or <code>Object</code> streams this can silently produce a stream of streams that later code mishandles); conversely, using <code>flatMap</code> where plain <code>map</code> would suffice (e.g., forcing a wrapping <code>Stream.of(value)</code> around a naturally scalar mapping function) adds unnecessary overhead and obscures intent.</li>
+                <li><strong>Choosing <code>TreeMap</code> as a <code>groupingBy</code> map-factory when keys can be <code>null</code> or non-<code>Comparable</code></strong> — <code>TreeMap</code> throws <code>NullPointerException</code> on a <code>null</code> key (it has no default ordering position for it) and <code>ClassCastException</code> if keys aren't mutually comparable — a pitfall that only surfaces at runtime with real data, not at compile time, since <code>groupingBy</code>'s map-factory overload doesn't statically enforce <code>Comparable</code> the way <code>TreeMap</code>'s own constructor contract implies.</li>
+            </ul>
+
+            <h3>Architectural Impact</h3>
+            <ul>
+                <li>The <code>flatMap</code>-then-<code>groupingBy</code> pattern is the idiomatic Java Streams equivalent of a SQL <code>JOIN</code> followed by <code>GROUP BY</code> on a many-to-many junction relationship — recognizing this mapping is valuable when translating between relational data-access code and in-memory stream processing over already-loaded domain objects, and it's a strong signal for when an in-memory approach might be better served by pushing the aggregation into the database instead (if the dataset is large enough that flattening it in application memory becomes the bottleneck).</li>
+                <li><code>groupingBy</code>/<code>partitioningBy</code>'s standard-library-provided <code>Collector</code> implementations are <strong>safe under parallel streams by design</strong> (they define proper combiners for merging partial per-thread results) — this is architecturally significant because it means the aggregation patterns shown in this section are exactly the kind of code that <em>can</em> safely gain the "one-word change to <code>.parallelStream()</code>" benefit promised at the end of the previous section's notes, in sharp contrast to the side-effecting <code>forEach</code>-with-shared-mutable-state anti-pattern flagged as dangerous there.</li>
+                <li>Choosing between cramming multiple downstream collectors into one dense <code>groupingBy</code> call versus splitting into two simpler sequential stream operations (as done in the <code>DepartmentReportService</code> example above) is a genuine code-review-level design decision about <strong>pipeline readability versus pipeline "purity"</strong> — there's no universally correct answer, but senior engineers should recognize when a downstream-collector chain has become dense enough that a colleague reviewing the PR would need to mentally "unwind" three levels of nested collector generics to verify correctness, and split accordingly.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: What are loop fusion and short-circuiting, and why are they described as the two reasons streams outperform equivalent hand-written loop code?</strong><br>
+            A: Loop fusion means multiple intermediate operations (e.g., <code>filter</code> then <code>map</code>) are executed together in a single pass per element, rather than each operation making its own full pass over the whole source — avoiding both extra passes and extra intermediate collection allocation. Short-circuiting means certain operations (like <code>limit(n)</code>) let the pipeline stop pulling further source elements once their contract is satisfied, rather than always processing every element. Together they mean a stream pipeline often does strictly less work than the equivalent "filter into a temp list, then map that whole list, then truncate" imperative code would.</p>
+
+            <p><strong>Q2: What's the structural difference between <code>map</code> and <code>flatMap</code>, in one sentence, and what compile-time signal typically tells you which one you need?</strong><br>
+            A: <code>map</code> transforms each input element into exactly one output value; <code>flatMap</code> transforms each input element into its <em>own stream</em> of output values and then flattens all of those individual streams into one combined stream. The signal that you need <code>flatMap</code> instead of <code>map</code> is ending up with a stream of streams/arrays/collections (e.g., <code>Stream&lt;String[]&gt;</code> when you wanted <code>Stream&lt;String&gt;</code>) — a type mismatch at the point you try to use the result as if it were already flat.</p>
+
+            <p><strong>Q3: What does <code>Collectors.groupingBy(classifier)</code> return by default, and what's the single most important structural difference between it and <code>Collectors.partitioningBy(predicate)</code>?</strong><br>
+            A: By default, <code>groupingBy</code> returns a <code>Map&lt;K, List&lt;T&gt;&gt;</code> where <code>K</code> is whatever type the classifier function returns, with one entry per distinct key value actually observed in the source data. <code>partitioningBy</code> is a specialized version whose classifier is constrained to a <code>Predicate&lt;T&gt;</code> (returning <code>boolean</code>), so the result is always exactly a <code>Map&lt;Boolean, List&lt;T&gt;&gt;</code> with both <code>true</code> and <code>false</code> keys always present, regardless of how many actual buckets the data might otherwise suggest.</p>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: Explain what "downstream collector" means in the context of <code>groupingBy</code>, and give an example beyond the default <code>toList()</code> behavior.</strong><br>
+            A: A downstream collector is a second <code>Collector</code> supplied to <code>groupingBy</code> (or <code>partitioningBy</code>) that determines how the elements <em>within</em> each already-formed group are further processed or represented, rather than just defaulting to a raw <code>List</code> of the original objects. For example, <code>Collectors.groupingBy(Person::getDepartment, Collectors.counting())</code> produces a <code>Map&lt;String, Long&gt;</code> — the count of people per department — instead of a <code>Map&lt;String, List&lt;Person&gt;&gt;</code>; or <code>Collectors.groupingBy(Person::getDepartment, Collectors.mapping(Person::getName, Collectors.toList()))</code> produces a <code>Map&lt;String, List&lt;String&gt;&gt;</code> of just names per department, discarding the other fields.</p>
+
+            <p><strong>Q5: A colleague writes <code>people.stream().collect(Collectors.groupingBy(Person::getDepartments))</code> where <code>getDepartments()</code> returns a <code>List&lt;String&gt;</code> (a person can belong to multiple departments), expecting one group per individual department. What actually happens, and how do you fix it?</strong><br>
+            A: Since the classifier function itself returns a <code>List&lt;String&gt;</code>, <code>groupingBy</code> uses the <em>entire list object</em> as the map key (grouped via <code>List.equals()</code>/<code>hashCode()</code>) — you get one group per unique combination of departments a person happens to have, not one group per individual department name. The fix is a two-stage pipeline: first <code>flatMap</code> each person into multiple individual <code>(department, person)</code> pairs (one pair per department they belong to), then <code>groupingBy</code> on the now-single-valued department key of those flattened pairs, optionally with a <code>mapping</code> downstream collector to project back down to just the field you want (e.g., name) in each bucket.</p>
+
+            <p><strong>Q6: Why might a senior engineer intentionally choose <code>TreeMap::new</code> as the map-factory argument to <code>groupingBy</code> instead of relying on the default <code>HashMap</code>, and what's a risk that decision introduces that doesn't exist with the default?</strong><br>
+            A: <code>TreeMap</code> maintains keys in sorted order (via a red-black tree), which is useful when the grouped result needs to be presented or iterated in a predictable, sorted order (e.g., a report where department names should appear alphabetically) without an extra explicit sort step afterward. The risk it introduces: <code>TreeMap</code> requires keys to be mutually <code>Comparable</code> (or supplies a <code>Comparator</code>) and throws <code>NullPointerException</code> on a <code>null</code> key, whereas the default <code>HashMap</code>-backed grouping tolerates <code>null</code> keys and doesn't care whether the key type is comparable at all — so switching factories can introduce a runtime failure mode that wasn't previously possible, if the classifier can ever produce a <code>null</code> or non-comparable key.</p>
+
+            <h3>Advanced</h3>
+            <p><strong>Q7: Walk through, at a mechanical level, why the transcript observes interleaved "filtering / mapping / filtering / filtering..." print output rather than "filtering x N, then mapping x N" — and explain what would have to be true of the JDK's internal implementation for that interleaving to happen.</strong><br>
+            A: For interleaving to occur, the stream pipeline can't be implemented as "materialize the fully filtered result, then map over that materialized result" — instead, each stage must be represented as something like a wrapped <code>Sink</code> that, when it receives one element, immediately decides whether to pass it forward to the next stage's <code>Sink</code>, all before the source ever produces the next element. Concretely: the source pulls element 1, pushes it into the filter sink; if it passes, the filter sink immediately pushes it into the map sink, which processes and forwards it onward — only then does the source pull element 2. This vertical, per-element "push through the whole chain" execution model is precisely why fusion is possible without any special-casing between <code>filter</code> and <code>map</code> specifically — it falls out naturally from every intermediate operation being implemented as a <code>Sink</code>-wrapping stage rather than an eager whole-collection transform.</p>
+
+            <p><strong>Q8: Both <code>groupingBy</code> and <code>partitioningBy</code> produce <code>Collector</code>s that are documented as safe to use with parallel streams (not yet formally covered, but foreshadowed). Given what a <code>Collector</code> fundamentally is (supplier + accumulator + combiner), explain what property their implementations must have for that parallel-safety claim to hold, and contrast it with why a raw <code>forEach</code> accumulating into a shared <code>ArrayList</code> is <em>not</em> safe in the same scenario.</strong><br>
+            A: A <code>Collector</code> used correctly in a parallel stream needs its accumulator and, critically, its <strong>combiner</strong> function to correctly and independently merge two partial results computed by different threads on different chunks of the source — e.g., <code>groupingBy</code>'s combiner must correctly merge two partial <code>Map&lt;K, List&lt;T&gt;&gt;</code> results (matching keys' lists get concatenated, new keys get added) regardless of which thread computed which partial map, with no reliance on any specific execution order or shared mutable state accessed without synchronization. A raw <code>forEach(item -&gt; sharedList.add(transform(item)))</code> has no such combiner concept at all — it's direct, unsynchronized, order-dependent mutation of one single shared object from potentially many threads simultaneously, which is exactly the data-race pattern that's unsafe the moment more than one thread touches it concurrently, regardless of what <code>ArrayList</code> "usually" tolerates under light contention.</p>
+
+            <p><strong>Q9: The multi-department <code>flatMap</code>-then-<code>groupingBy</code> example effectively performs an in-memory equivalent of a relational join-then-group-by. At what point would you argue this pattern is an architectural smell suggesting the aggregation should happen in the database (or a dedicated data-processing layer) instead of in application-level Java stream code?</strong><br>
+            A: The pattern becomes a smell once either (a) the source collections being flattened and grouped are large enough that materializing them fully in application memory (as opposed to letting a database engine stream/aggregate them with proper indexing and query-plan optimization) becomes a genuine memory or GC-pressure concern, or (b) the "explode then group" logic starts needing further joins against <em>other</em> large in-memory collections, effectively re-implementing relational join/aggregation logic by hand in Java rather than leveraging a query engine built specifically for that purpose. For modest, already-loaded-for-other-reasons in-memory datasets (a report generator working over data already fetched for display, for instance), the in-memory stream approach shown here is perfectly appropriate and often clearer than pushing every aggregation variant into bespoke SQL; the architectural judgment call is about data scale and whether the aggregation logic is a one-off presentation concern versus a repeated, performance-sensitive query pattern that belongs closer to the data.</p>
+
+            <hr>
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <ul>
+                <li>I can explain loop fusion and short-circuiting as two distinct, specific mechanisms (not vague "streams are optimized" claims), and predict the interleaved print-statement pattern a fused filter+map pipeline would produce.</li>
+                <li>I can correctly distinguish when to use <code>map</code> versus <code>flatMap</code> based on whether the mapping function naturally produces one value or a stream/collection of values per input element, and fix a "stream of streams" type mismatch by introducing <code>flatMap</code>.</li>
+                <li>I can use <code>Collectors.groupingBy</code> with a downstream collector (<code>counting</code>, <code>summingInt</code>, <code>mapping</code>, <code>toSet</code>, <code>joining</code>) to reshape per-group results beyond the default <code>List</code>, and correctly order the classifier/map-factory/downstream arguments in the 3-argument overload.</li>
+                <li>I can recognize and fix the "grouping by a collection-valued classifier groups by the whole list, not its elements" bug using the <code>flatMap</code>-then-<code>groupingBy</code> pattern for many-to-many relationships.</li>
+                <li>I can explain the single defining difference between <code>groupingBy</code> and <code>partitioningBy</code> (arbitrary key type and group count vs. always-boolean, always-two-buckets) and choose the right one for a given business rule.</li>
+                <li>I can identify the risk of assuming a <code>groupingBy</code> result contains every conceptually possible key (it only contains keys observed in the data) versus a <code>partitioningBy</code> result (always contains both <code>true</code> and <code>false</code>).</li>
+                <li>I can explain, at a conceptual level, why <code>groupingBy</code>/<code>partitioningBy</code>'s <code>Collector</code> implementations are safe under future parallel-stream use because of their combiner semantics, and contrast that with why a raw side-effecting <code>forEach</code> into a shared mutable collection is not.</li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
