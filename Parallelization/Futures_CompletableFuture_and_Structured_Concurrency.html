@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futures, CompletableFuture, and Structured Concurrency</title>
+    <style>
+        :root {
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-hover: #f8fafc;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --heading-color: #0f172a;
+            --primary-accent: #2563eb;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --inline-code-bg: #e2e8f0;
+            --inline-code-text: #b91c1c;
+            --border-color: #e2e8f0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            line-height: 1.7;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+            border-right: 1px solid #1e293b;
+        }
+
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 0.75rem 1rem;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar a:hover {
+            background-color: var(--sidebar-hover);
+            color: var(--sidebar-text-hover);
+            padding-left: 1.25rem;
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            margin-left: 280px;
+            padding: 3rem 5%;
+            width: calc(100% - 280px);
+            box-sizing: border-box;
+        }
+
+        .content {
+            background: var(--card-bg);
+            padding: 3rem 4rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--heading-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-top: 0;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-accent);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            color: var(--primary-accent);
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            color: var(--heading-color);
+        }
+
+        p {
+            margin-bottom: 1.2rem;
+        }
+
+        strong {
+            color: var(--heading-color);
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            color: var(--code-text);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        code {
+            background-color: var(--inline-code-bg);
+            color: var(--inline-code-text);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 2rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border-color);
+            margin: 2rem 0;
+        }
+
+        /* Callouts / Highlight Box */
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-accent);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            .content-wrapper {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Vertical Sidebar -->
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#intro">Context & Scope</a></li>
+            <li><a href="#core-concept">1. Core Concept & Theory</a></li>
+            <li><a href="#course-content">2. Key Concepts & Code</a></li>
+            <li><a href="#practical-implementation">3. Practical Implementation</a></li>
+            <li><a href="#deep-dive">4. Tradeoffs & Architecture</a></li>
+            <li><a href="#interview-questions">5. Interview Questions</a></li>
+            <li><a href="#mastery-checklist">6. Mastery Checklist</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-wrapper">
+        <div class="content">
+
+            <div id="intro">
+                <h1>Futures, CompletableFuture, and Structured Concurrency</h1>
+                <h2 style="margin-top: -10px; margin-bottom: 0.5rem;">How Virtual Threads Change the Concurrency Story</h2>
+                <h3 style="color: var(--text-main); font-weight: normal; margin-top: 0; margin-bottom: 2rem;">Principal Architect Notes — Production-Grade Mastery Series</h3>
+                
+                <p><strong>Course position:</strong> <em>Virtual Threads</em> section, final cluster — covers: <code>Future</code>/<code>Callable</code> (the classic, blocking approach) → <code>CompletableFuture</code> (async/non-blocking, chaining, combining) → structured concurrency theory → <code>StructuredTaskScope</code>/<code>Subtask</code> (wait-for-all) → <code>ShutdownOnFailure</code> → <code>ShutdownOnSuccess</code> → continuations/coroutines (how virtual threads are implemented under the hood) → scaling with virtual threads (the course's closing argument). This is the last content cluster before the Virtual Threads Quiz, closing out the entire course.</p>
+                <p><strong>Already known (assumed):</strong> Everything through virtual thread creation, carrier threads, mounting/unmounting, pinning, and <code>newVirtualThreadPerTaskExecutor()</code>.</p>
+                
+                <div class="highlight-box">
+                    <p><strong>⚠️ Note on CompletableFuture Part 1:</strong> You mentioned only having the transcript for <strong>part 2</strong> of the CompletableFuture lecture. Per your instruction, I've added the foundational/"part 1" material myself in section 2 below — it's clearly marked as <strong>added content</strong>, not derived from your transcript, so you can distinguish it if you later get the actual part 1 transcript to cross-check against.</p>
+                </div>
+                <hr>
+            </div>
+
+            <h2 id="core-concept">1. Core Concept & Simplified Theory (The "Elevator Pitch")</h2>
+            
+            <div class="highlight-box">
+                <p><strong>One-Sentence Definition:</strong><br>
+                Java's concurrency-result-handling story evolved from <code>Future</code> (blocking <code>.get()</code>, no chaining) → <code>CompletableFuture</code> (non-blocking chains, but hard to reason about and debug) → and now, with virtual threads making blocking calls cheap again, has swung back to <strong>structured concurrency</strong> (<code>StructuredTaskScope</code>), which lets you write simple, blocking-looking, imperative-style parent/child task code without paying the old platform-thread blocking penalty or losing the async approach's flexibility.</p>
+            </div>
+
+            <h3>The Architecture Analogy</h3>
+            <p>Imagine three eras of managing a small team's collaborative work. Era 1 (<code>Future</code>): you personally sit and wait, arms crossed, staring at each teammate's desk until they finish their task — you can't do anything else while waiting, and once one is done, you have no way to say "and then automatically pass that to teammate B." Era 2 (<code>CompletableFuture</code>): you set up an elaborate relay of sticky notes — "when you're done, pass this to them, who'll pass it to that person" — powerful, but if something goes wrong three notes down the chain, good luck tracing back who was supposed to do what. Era 3 (structured concurrency): you just say "you three, go do your parts; I'll wait right here for <em>all</em> of you, and if any of you fails, I'll immediately tell the others to stop" — simple, direct supervision, but now genuinely cheap to "wait right here" because the person waiting (a virtual thread) doesn't tie up a scarce physical resource while waiting.</p>
+
+            <h3>How the JVM Sees It</h3>
+            <ul>
+                <li>A <code>Future</code> returned by <code>ExecutorService.submit(Callable)</code> is a handle to a result being computed on another (platform) thread; calling <code>.get()</code> parks the calling thread until that result is available — on a platform thread, this means a genuinely blocked OS thread, exactly the cost virtual threads exist to eliminate.</li>
+                <li><code>CompletableFuture</code>'s chaining methods (<code>thenCombine</code>, <code>thenApply</code>, <code>.accept(...)</code>) register callback-style continuations that the completing thread (or a specified executor) invokes when the upstream stage finishes — this avoids the calling thread blocking, but at the cost of the call stack no longer reflecting the logical "who called whom" relationship, which is precisely why the course frames it as harder to debug.</li>
+                <li><code>StructuredTaskScope</code> (JDK 21, preview API) is built specifically to run its forked subtasks as <strong>virtual threads</strong> — when you <code>fork()</code> a task, a virtual thread is created (not pooled — consistent with everything in the prior virtual-threads lecture), and <code>join()</code> (or <code>joinUntil</code>) blocks the <em>calling</em> virtual/platform thread until all forked subtasks finish. If the caller itself is a virtual thread, that blocking call is cheap (unmount/remount), which is the direct technical reason the course argues structured concurrency's "just block and wait" style is no longer the anti-pattern it used to be.</li>
+                <li><strong>Continuations</strong> are the actual JVM-level mechanism making all of this possible: a virtual thread's executable state (its call stack, local variables, program counter) is captured as a continuation object that can be suspended (<code>yield</code>) and resumed (<code>run</code> again from where it left off) — this is the low-level primitive <code>StructuredTaskScope</code>, <code>CompletableFuture</code>, and even ordinary blocking calls on virtual threads all ultimately rest on.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="course-content">2. Course Transcript Content (The "What")</h2>
+            
+            <h3>Key Concepts & Definitions</h3>
+            <ul>
+                <li><strong><code>Future&lt;T&gt;</code></strong>: a handle to a result that will be available at some point, returned by <code>ExecutorService.submit(Callable&lt;T&gt;)</code>. Key methods: <code>.get()</code> (blocks until the result is ready, throws <code>ExecutionException</code> wrapping any exception from the task), <code>.isDone()</code> (non-blocking check).</li>
+                <li><strong><code>Callable&lt;T&gt;</code></strong>: like <code>Runnable</code>, but its single abstract method <code>call()</code> returns a value of type <code>T</code> and is allowed to throw checked exceptions directly (unlike <code>Runnable.run()</code>, which isn't).</li>
+                <li><strong>The core problem with <code>Future</code></strong>: no way to be <em>notified</em> when the result is ready or to chain further operations onto it — the only way to get the value is to call the blocking <code>.get()</code>, which (on a platform thread) idles the calling thread for the whole wait.</li>
+                <li><strong><code>CompletableFuture</code></strong>: an async, non-blocking, chainable alternative — <code>supplyAsync(Supplier&lt;T&gt;)</code> starts a computation asynchronously (on the common pool or a specified <code>Executor</code>); <code>thenApply</code>/<code>thenCombine</code>/<code>.accept(...)</code> chain further processing onto the result without the caller blocking; <code>.join()</code> (like <code>Future.get()</code> but unchecked) can still be used to retrieve a final combined result once you're ready to synchronize.</li>
+                <li><strong><em>(Added — Part 1 basics, no transcript available)</em></strong> <strong>The core <code>CompletableFuture</code> API family</strong>, for completeness:
+                    <ul>
+                        <li><strong>Creation</strong>: <code>CompletableFuture.supplyAsync(Supplier&lt;T&gt;)</code> (returns a value), <code>CompletableFuture.runAsync(Runnable)</code> (no return value), or <code>new CompletableFuture&lt;T&gt;()</code> plus manually calling <code>.complete(value)</code> when you want to bridge a callback-style API into a <code>CompletableFuture</code>.</li>
+                        <li><strong>Chaining on one future's result</strong>: <code>thenApply(Function&lt;T,R&gt;)</code> (transform the result, synchronously on the same completing thread by default), <code>thenApplyAsync(...)</code> (transform on a new async task instead), <code>thenAccept(Consumer&lt;T&gt;)</code> (consume the result, return nothing), <code>thenRun(Runnable)</code> (run something once complete, ignoring the result value entirely).</li>
+                        <li><strong>Combining two futures</strong>: <code>thenCombine(CompletableFuture&lt;U&gt;, BiFunction&lt;T,U,R&gt;)</code> (combine two independent futures' results once both complete), <code>thenCompose(Function&lt;T, CompletableFuture&lt;R&gt;&gt;)</code> (chain a <em>dependent</em> future — i.e., "flatMap" for futures, used when the next async step needs to itself return a <code>CompletableFuture</code> rather than a plain value).</li>
+                        <li><strong>Exception handling</strong>: <code>.exceptionally(Function&lt;Throwable,T&gt;)</code> (supply a fallback value if any upstream stage failed), <code>.handle(BiFunction&lt;T,Throwable,R&gt;)</code> (handle both the success and failure case in one callback).</li>
+                        <li><strong>Retrieving the final result</strong>: <code>.get()</code> (blocking, throws checked <code>ExecutionException</code>/<code>InterruptedException</code>) or <code>.join()</code> (blocking, throws unchecked <code>CompletionException</code>) — both still ultimately block <em>something</em>, which is exactly the seed of the course's later point that even <code>CompletableFuture</code>'s non-blocking chaining eventually needs a blocking join somewhere if you need a final synchronous result.</li>
+                    </ul>
+                </li>
+                <li><strong>Unstructured concurrency</strong>: the general pattern (including both raw async threads and <code>CompletableFuture</code> chains) where child tasks/threads have no well-defined relationship to whatever spawned them — no automatic way for a child's failure to notify or cancel siblings, and a real risk of <strong>orphaned threads</strong> (a still-running task whose parent no longer cares about or waits for its result).</li>
+                <li><strong>Structured concurrency</strong>: a pattern with explicit <strong>parent/child relationships</strong> — a scope is opened, child tasks are forked within it, the scope's <code>join()</code> waits for children, and the scope's closing/shutdown behavior can be customized (wait for all, stop on first failure, stop on first success) — all backed by <code>StructuredTaskScope</code> (JDK 21+, preview at time of this course).</li>
+                <li><strong><code>StructuredTaskScope&lt;T&gt;</code></strong>: opened via try-with-resources; <code>.fork(Callable&lt;T&gt;)</code> starts a subtask (as a virtual thread) and returns a <code>Subtask&lt;T&gt;</code> (formerly <code>Future</code>-like, in newer JDKs called <code>Subtask</code>); <code>.join()</code> waits for all forked subtasks to complete.</li>
+                <li><strong><code>Subtask&lt;T&gt;</code></strong>: the forked-task handle — <code>.get()</code> retrieves its result (only valid to call after <code>join()</code> has returned, and only if the subtask succeeded), <code>.state()</code> returns <code>Subtask.State</code> (<code>SUCCESS</code>, <code>FAILED</code>, or <code>UNAVAILABLE</code>) so you can check outcome without risking an exception from a blind <code>.get()</code> call.</li>
+                <li><strong><code>StructuredTaskScope.ShutdownOnFailure</code></strong>: a scope variant where, if <em>any</em> forked subtask fails, the scope immediately cancels/shuts down all other still-running subtasks rather than waiting for them — <code>.join()</code> still waits for the shutdown to propagate, and <code>.throwIfFailed()</code> re-throws the triggering failure so the caller doesn't need to manually check each subtask's state.</li>
+                <li><strong><code>StructuredTaskScope.ShutdownOnSuccess</code></strong>: the mirror-image variant — as soon as <em>any</em> forked subtask succeeds, the scope immediately cancels all other still-running subtasks (a "first past the post" pattern) — <code>.result()</code> returns the winning subtask's value (throwing if none succeeded).</li>
+                <li><strong>Continuation</strong>: a JVM-internal object capturing a suspended execution's stack and instruction pointer, such that calling <code>run</code> again resumes exactly where a prior <code>yield</code> left off, rather than restarting from the top — the mechanism underlying virtual thread suspension/resumption.</li>
+                <li><strong>Coroutine</strong>: a generalization of a subroutine with multiple possible entry/re-entry points (via <code>yield</code>/re-<code>run</code>) instead of a single entry point and single return — the conceptual model virtual threads are built on.</li>
+                <li><strong>Vertical scaling</strong>: adding more resources (CPU, memory) to a single service instance.</li>
+                <li><strong>Horizontal scaling</strong>: adding more instances of a service, at the cost of added complexity (data consistency across instances/databases).</li>
+            </ul>
+
+            <h3>Code Snippets (from Transcript) — annotated</h3>
+
+            <p><strong><code>Future</code>/<code>Callable</code> — the classic blocking approach:</strong></p>
+<pre><code>ExecutorService executor = Executors.newFixedThreadPool(5);
+
+class FutureTask implements Callable&lt;String&gt; {
+    @Override
+    public String call() throws Exception {
+        System.out.println("starting callable");
+        Thread.sleep(2000);
+        System.out.println("finishing callable");
+        return "callable finished";
+    }
+}
+
+Future&lt;String&gt; future = executor.submit(new FutureTask());
+
+while (!future.isDone()) {
+    System.out.println("main thread is waiting for the result");
+}
+String result = future.get();          // blocks until available
+System.out.println(result);</code></pre>
+            <ul>
+                <li><strong>The explicitly-named core problem:</strong> <code>.get()</code> blocks the calling thread until the result is ready. On a platform thread (as in this demo, deliberately <em>not</em> using virtual threads to isolate the concept), that means a genuinely idle OS thread for the whole two-second wait — the same wasteful pattern flagged throughout the virtual-threads section, just now applied to the specific <code>Future</code> API rather than a raw <code>Thread.sleep()</code>.</li>
+                <li><strong>No composability:</strong> there's no way to say "when this future completes, automatically kick off another operation with its result" — the only interaction point is the blocking <code>.get()</code> (or busy-polling <code>.isDone()</code>, shown here purely to illustrate the point, not as a recommended pattern — busy-waiting like this wastes CPU cycles even worse than a plain blocking <code>.get()</code> would).</li>
+            </ul>
+
+            <p><strong><code>CompletableFuture</code> — chaining and combining (the transcript's part 2 content):</strong></p>
+<pre><code>CompletableFuture&lt;String&gt; combined = CompletableFuture.supplyAsync(() -&gt; "hello")
+    .thenCombine(CompletableFuture.supplyAsync(() -&gt; "world"),
+                 (s1, s2) -&gt; s1 + " " + s2)
+    .thenApply(String::toUpperCase);
+
+combined.thenAccept(System.out::println);   // HELLO WORLD</code></pre>
+            <ul>
+                <li><code>thenCombine</code> takes a <em>second</em>, independent <code>CompletableFuture</code> and a combining <code>BiFunction</code> — both upstream futures run concurrently (potentially on different threads from the common pool), and the combiner runs once <em>both</em> are complete.</li>
+                <li><code>thenApply</code> chains a further, single-input transformation onto the combined result — demonstrating that <code>CompletableFuture</code> chains compose arbitrarily deep, unlike <code>Future</code>'s single blocking <code>.get()</code>.</li>
+            </ul>
+
+            <p><strong><code>CompletableFuture</code> with virtual threads as the backing executor — DB + REST fan-out:</strong></p>
+<pre><code>try (ExecutorService service = Executors.newVirtualThreadPerTaskExecutor()) {
+    CompletableFuture&lt;String&gt; combined = CompletableFuture
+        .supplyAsync(dbQuery::run, service)
+        .thenCombine(CompletableFuture.supplyAsync(restQuery::run, service),
+                     (dbResult, restResult) -&gt; dbResult + restResult);
+
+    String result = combined.join();     // still blocks -- but cheaply, since caller can be a virtual thread
+    System.out.println(result);
+}</code></pre>
+            <ul>
+                <li><strong>The pivotal observation the course makes here:</strong> <code>.join()</code> (like <code>Future.get()</code>) is <em>still</em> a blocking call — <code>CompletableFuture</code> doesn't eliminate blocking entirely, it just defers <em>where</em> you're forced to block to (once, at the point you actually need a synchronous final result) rather than at every intermediate step. Historically, <code>.join()</code>/<code>.get()</code> were specifically discouraged because they blocked a platform thread; with virtual threads as the executor and (implicitly) the calling context, that blocking cost is dramatically reduced — directly setting up the course's argument that virtual threads make the <em>simpler</em>, blocking-style code (structured concurrency, covered next) newly attractive again.</li>
+            </ul>
+
+            <p><strong><code>StructuredTaskScope</code> — wait-for-all (the default/base behavior):</strong></p>
+<pre><code>record LongProcess(int timeToSleep, String result) implements Callable&lt;String&gt; {
+    @Override
+    public String call() throws InterruptedException {
+        Thread.sleep(Duration.ofSeconds(timeToSleep));
+        return result;
+    }
+}
+
+try (var scope = new StructuredTaskScope&lt;String&gt;()) {
+    Subtask&lt;String&gt; task1 = scope.fork(new LongProcess(1, "result one"));
+    Subtask&lt;String&gt; task2 = scope.fork(new LongProcess(3, "result two"));
+
+    scope.join();   // waits for BOTH subtasks to finish, no matter what
+
+    if (task1.state() == Subtask.State.SUCCESS) {
+        System.out.println(task1.get());
+    }
+    if (task2.state() == Subtask.State.SUCCESS) {
+        System.out.println(task2.get());
+    }
+}</code></pre>
+            <ul>
+                <li><strong>The key structural point:</strong> <code>scope.fork(...)</code> creates a virtual thread per subtask (no pooling, consistent with the earlier virtual-threads lecture); <code>scope.join()</code> is the single, explicit "wait point" — and because it's blocking a call that (in idiomatic usage) itself typically runs on a virtual thread, that block is cheap. After <code>join()</code> returns, <code>.get()</code> on any individual <code>Subtask</code> is guaranteed safe to call (no risk of it still being in-flight) — checking <code>.state()</code> first lets you avoid an exception from a subtask that failed rather than succeeded.</li>
+                <li><strong>The explicitly-flagged downside of plain (base) <code>StructuredTaskScope</code>:</strong> it always waits for <em>every</em> subtask, even if one has already failed and you know you can't proceed without both results — this "waits for the slow one anyway" behavior is exactly what motivates <code>ShutdownOnFailure</code>.</li>
+            </ul>
+
+            <p><strong><code>StructuredTaskScope.ShutdownOnFailure</code> — stop everything on first failure:</strong></p>
+<pre><code>try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+    Subtask&lt;String&gt; task1 = scope.fork(new LongProcessFail(1, "result one", true));   // fails after 1s
+    Subtask&lt;String&gt; task2 = scope.fork(new LongProcessFail(7, "result two", false));  // would succeed after 7s
+
+    scope.join();
+    scope.throwIfFailed();   // re-throws task1's exception if any subtask failed
+
+    // only reached if NEITHER subtask failed
+    System.out.println(task1.get() + task2.get());
+}</code></pre>
+            <ul>
+                <li><strong>The direct payoff demonstrated:</strong> the moment <code>task1</code> throws (after only 1 second), <code>ShutdownOnFailure</code> immediately cancels <code>task2</code> rather than letting it run the full 7 seconds pointlessly — <code>scope.join()</code> returns promptly once the shutdown has propagated, and <code>scope.throwIfFailed()</code> surfaces the underlying failure without you needing to manually inspect each subtask's <code>.state()</code>.</li>
+                <li><strong>The stated real-world motivation:</strong> microservice fan-out where a downstream call's result is <em>useless</em> without a sibling call's result too (the course's own example: fetching from both a user service and a vehicle service, where a failed user-service call makes continuing to wait on the vehicle-service call pointless) — <code>ShutdownOnFailure</code> avoids wasting time/resources on now-irrelevant in-flight work.</li>
+            </ul>
+
+            <p><strong><code>StructuredTaskScope.ShutdownOnSuccess</code> — first successful result wins:</strong></p>
+<pre><code>try (var scope = new StructuredTaskScope.ShutdownOnSuccess&lt;String&gt;()) {
+    scope.fork(new LongProcess(1, "service one result"));
+    scope.fork(new LongProcess(5, "service two result"));
+
+    scope.join();
+    String result = scope.result();   // the first subtask to succeed; cancels the other(s)
+    System.out.println(result);
+}</code></pre>
+            <ul>
+                <li><strong>The stated real-world motivation:</strong> calling multiple redundant/unreliable services for the same value (the course's example: getting the current temperature from several weather services) — whichever responds successfully first is used, and the rest are cancelled immediately rather than left running for a value you no longer need.</li>
+                <li><strong>Failure handling:</strong> if the <em>first-completing</em> task fails rather than succeeds, the scope doesn't give up — it waits for the next candidate to complete; only if <em>every</em> forked subtask fails does <code>scope.result()</code> ultimately throw (the course's demo explicitly wraps this in try/catch and prints "there is no solution" for that case).</li>
+            </ul>
+
+            <h3>Important Caveats/Warnings (explicitly from the transcript)</h3>
+            <ul>
+                <li><strong><code>Future.get()</code> blocks the calling thread with no way to be notified or chain further work</strong> — the single, named reason <code>CompletableFuture</code> was introduced.</li>
+                <li><strong><code>CompletableFuture</code> chains are non-blocking but harder to debug and reason about</strong> — explicitly called out: "submitted tasks and operations may be running indefinitely... it is very hard to debug and maintain non-blocking programming related approaches."</li>
+                <li><strong><code>.join()</code>/<code>.get()</code> on a <code>CompletableFuture</code> still blocks</strong> — it doesn't eliminate blocking, it just relocates where you're forced to synchronize; this was historically discouraged specifically because it blocked a platform thread, a concern virtual threads substantially defuse.</li>
+                <li><strong>Base <code>StructuredTaskScope.join()</code> always waits for every forked subtask</strong>, even ones whose result you already know you can't use because a sibling failed — motivating the <code>ShutdownOnFailure</code> variant.</li>
+                <li><strong><code>Subtask.get()</code> should only be called after <code>join()</code> has returned</strong>, and ideally after checking <code>.state()</code> — calling it on a still-running or failed subtask is a misuse the course explicitly guards against with the <code>state() == SUCCESS</code> check.</li>
+                <li><strong>Unstructured concurrency risks orphaned threads</strong>: a long-running task whose parent thread was interrupted or no longer cares has "nowhere to return the result," continuing to run for no purpose — explicitly named as a structural problem structured concurrency's defined parent/child relationship solves.</li>
+                <li><strong>Horizontal scaling adds real complexity</strong> (data consistency across multiple database instances) beyond just "add more machines" — explicitly flagged as a genuine cost, not a free lunch, when contrasting it against the virtual-threads/structured-concurrency alternative.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="practical-implementation">3. Senior-Level Practical Implementation & Examples (The "How")</h2>
+            
+            <h3>Real-World Use Cases</h3>
+            <ol>
+                <li><strong>Microservice fan-out requiring all results (<code>ShutdownOnFailure</code>)</strong> — the course's own example: a digital-key service needing both user data and vehicle data before it can proceed; if either downstream call fails, there's no point waiting on the other.</li>
+                <li><strong>Redundant-provider "first success wins" lookups (<code>ShutdownOnSuccess</code>)</strong> — the course's own weather-service example generalizes directly to things like multi-region API failover, querying several cache replicas and taking whichever responds first, or racing a primary and a fallback data source.</li>
+                <li><strong>Legacy <code>CompletableFuture</code> chains in codebases not yet on structured concurrency</strong> — real production Java code written before JDK 21 (or in codebases with a slower migration path) still commonly uses <code>CompletableFuture</code> chains for exactly the DB+REST combination pattern shown in this section; understanding both styles is necessary for maintaining such code while advocating for eventual migration.</li>
+            </ol>
+
+            <h3>Complete Code Implementation</h3>
+            <p>A production-shaped <code>ShutdownOnFailure</code>-based fan-out for the course's own "digital key needs user + vehicle data" scenario, with the exception-surfacing and timeout handling the transcript's demo simplified away:</p>
+
+<pre><code>import java.time.Duration;
+import java.util.concurrent.StructuredTaskScope;
+import java.util.concurrent.StructuredTaskScope.ShutdownOnFailure;
+import java.util.concurrent.StructuredTaskScope.Subtask;
+
+public class DigitalKeyService {
+
+    public record UserInfo(String userId, String name) {}
+    public record VehicleInfo(String vin, String model) {}
+    public record DigitalKeyResult(UserInfo user, VehicleInfo vehicle) {}
+
+    public DigitalKeyResult buildDigitalKey(String userId, String vin)
+            throws InterruptedException, java.util.concurrent.TimeoutException {
+
+        try (var scope = new ShutdownOnFailure()) {
+            Subtask&lt;UserInfo&gt; userTask = scope.fork(() -&gt; fetchUser(userId));
+            Subtask&lt;VehicleInfo&gt; vehicleTask = scope.fork(() -&gt; fetchVehicle(vin));
+
+            // Bound the wait -- a real downstream call could hang; joinUntil
+            // guards against waiting forever if a service never responds
+            // and never actually fails/completes either.
