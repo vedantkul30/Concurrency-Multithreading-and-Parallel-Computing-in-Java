@@ -484,3 +484,159 @@ public class DigitalKeyService {
             // Bound the wait -- a real downstream call could hang; joinUntil
             // guards against waiting forever if a service never responds
             // and never actually fails/completes either.
+            scope.joinUntil(java.time.Instant.now().plus(Duration.ofSeconds(5)));
+            scope.throwIfFailed(cause -&gt; new IllegalStateException("Digital key lookup failed", cause));
+
+            return new DigitalKeyResult(userTask.get(), vehicleTask.get());
+        }
+    }
+
+    private UserInfo fetchUser(String userId) throws InterruptedException {
+        Thread.sleep(Duration.ofMillis(300));   // simulated I/O
+        return new UserInfo(userId, "Jane Doe");
+    }
+
+    private VehicleInfo fetchVehicle(String vin) throws InterruptedException {
+        Thread.sleep(Duration.ofMillis(400));   // simulated I/O
+        return new VehicleInfo(vin, "Model X");
+    }
+}</code></pre>
+
+            <p><strong>Why these changes matter at a senior level:</strong></p>
+            <ul>
+                <li><code>scope.joinUntil(deadline)</code> instead of unbounded <code>scope.join()</code> — the transcript's examples only ever demonstrate success or an explicit thrown failure; real downstream services can also simply <em>hang</em> without ever completing or throwing, and an unbounded <code>join()</code> would wait forever in that case. A deadline-bounded join is the production-appropriate default for any real network call.</li>
+                <li><code>scope.throwIfFailed(Function&lt;Throwable, X&gt;)</code> with a custom exception mapper — wraps whatever underlying failure occurred (a network exception, a timeout, etc.) into a single, domain-meaningful exception type the caller can handle, rather than leaking the raw underlying <code>Throwable</code> type up through the API.</li>
+                <li>Using <code>record</code> types for the DTOs (<code>UserInfo</code>, <code>VehicleInfo</code>, <code>DigitalKeyResult</code>) — concise, immutable, and a natural fit for values flowing between structured-concurrency subtasks with no shared mutable state to worry about.</li>
+            </ul>
+
+            <h3>Testing Concurrent Code</h3>
+            <ul>
+                <li><strong><code>Future</code>/<code>CompletableFuture</code> correctness:</strong> assert the final <code>.get()</code>/<code>.join()</code> result matches expectations across success and (for <code>CompletableFuture</code>) <code>.exceptionally()</code>/<code>.handle()</code> failure paths; for chains, verify intermediate stages actually ran on the expected executor if that matters to the test (e.g., confirming <code>thenApplyAsync</code> truly ran off the calling thread).</li>
+                <li><strong><code>StructuredTaskScope</code> correctness:</strong> test all three shutdown behaviors explicitly — base (wait-for-all, both subtasks' results present), <code>ShutdownOnFailure</code> (one subtask throws, assert the sibling was cancelled and <code>throwIfFailed()</code> surfaces the right exception), <code>ShutdownOnSuccess</code> (one subtask succeeds quickly, assert the sibling was cancelled and <code>.result()</code> returns the winner) — exactly mirroring the three scenarios the course itself walks through live.</li>
+                <li><strong>Timeout/hang testing:</strong> specifically test the <code>joinUntil</code> deadline path with a subtask that simulates hanging indefinitely (e.g., <code>Thread.sleep(Long.MAX_VALUE)</code> in a test double), asserting a <code>TimeoutException</code> surfaces rather than the test itself hanging — a scenario the course's own demos don't cover but that's essential in production code.</li>
+                <li><strong>Structured concurrency's biggest testing win over unstructured async chains:</strong> because parent/child relationships are explicit and <code>join()</code> is a single well-defined synchronization point, tests can reliably assert "no orphaned background work remains after this method returns" — something considerably harder to verify rigorously for a loose <code>CompletableFuture</code> chain with fire-and-forget stages.</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="deep-dive">4. Deep Dive: Tradeoffs, Architecture, and Performance (The "Why")</h2>
+            
+            <h3>Performance Implications</h3>
+            <ul>
+                <li><strong><code>Future.get()</code> on a platform thread costs a fully-idle OS thread for the wait duration</strong> — identical to every blocking-platform-thread cost flagged throughout this course; <code>CompletableFuture</code> avoids this specific cost by not requiring the <em>calling</em> thread to block until you explicitly ask for a final result via <code>.join()</code>/<code>.get()</code>.</li>
+                <li><strong><code>CompletableFuture</code>'s async stages run on the common <code>ForkJoinPool</code> by default</strong> (unless an explicit <code>Executor</code> is passed, as the course does with the virtual-thread executor for the DB/REST example) — this means <code>CompletableFuture</code> chains share exactly the same common-pool-starvation risk flagged in the Fork-Join and Stream-API-parallelization sections if blocking work is submitted to <code>supplyAsync</code> without an explicit executor.</li>
+                <li><strong><code>StructuredTaskScope.fork()</code> creates a fresh virtual thread per subtask</strong> (no pooling, per the established virtual-threads pattern) — meaning the "cost" of forking many subtasks is the same low, heap-allocated-stack cost as any other virtual thread creation, not the native-OS-thread cost that made large-scale platform-thread fan-out infeasible in the earlier sections.</li>
+                <li><strong><code>ShutdownOnFailure</code>/<code>ShutdownOnSuccess</code>'s early-cancellation behavior is a genuine performance win, not just a convenience</strong> — the course's own numbers make this concrete: a <code>ShutdownOnFailure</code> scope with a 1-second failing task and a 7-second sibling completes in ~1 second instead of waiting the full 7, because the sibling is actively cancelled rather than allowed to run to completion pointlessly.</li>
+            </ul>
+
+            <h3>Tradeoff Analysis Matrix: <code>Future</code> vs. <code>CompletableFuture</code> vs. <code>StructuredTaskScope</code></h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Criteria</th>
+                        <th><code>Future</code> (blocking)</th>
+                        <th><code>CompletableFuture</code> (async chaining)</th>
+                        <th><code>StructuredTaskScope</code> (virtual-thread structured concurrency)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Blocking cost on wait</td>
+                        <td>High on platform threads (idle OS thread)</td>
+                        <td>Avoided during chaining; still present at final <code>.join()</code>/<code>.get()</code></td>
+                        <td>Low — cheap if caller is a virtual thread, since <code>join()</code> unmounts rather than truly blocking an OS thread</td>
+                    </tr>
+                    <tr>
+                        <td>Composability (chain/combine results)</td>
+                        <td>None — one-shot blocking get only</td>
+                        <td>High — <code>thenApply</code>/<code>thenCombine</code>/<code>thenCompose</code> chains</td>
+                        <td>Moderate — explicit fork/join per scope, not infinitely chainable, but very clear</td>
+                    </tr>
+                    <tr>
+                        <td>Parent/child failure propagation</td>
+                        <td>None</td>
+                        <td>Manual, via <code>.exceptionally()</code>/<code>.handle()</code> per stage</td>
+                        <td>Automatic and structural — <code>ShutdownOnFailure</code> cancels siblings by design</td>
+                    </tr>
+                    <tr>
+                        <td>Debuggability / stack-trace clarity</td>
+                        <td>High — straightforward sequential blocking code</td>
+                        <td>Lower — logical call chain doesn't match a single readable call stack</td>
+                        <td>High — scope boundaries make parent/child relationships explicit in code structure</td>
+                    </tr>
+                    <tr>
+                        <td>Risk of orphaned/leaked work</td>
+                        <td>Low (single task, explicit get)</td>
+                        <td>Higher — a forgotten or uncancelled chain stage can run indefinitely with no supervisor</td>
+                        <td>Low — scope's try-with-resources close forces resolution of all forked subtasks</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Common Pitfalls (Senior Level)</h3>
+            <ul>
+                <li><strong>Treating <code>CompletableFuture</code>'s non-blocking chaining as a free lunch</strong> — the course explicitly flags debugging/maintenance difficulty as the real cost; a deeply chained <code>CompletableFuture</code> pipeline can be genuinely hard to reason about when something fails three stages in, since the code's lexical structure no longer mirrors the actual runtime call/wait relationships the way structured concurrency's scopes do.</li>
+                <li><strong>Submitting blocking work to <code>CompletableFuture.supplyAsync(...)</code> without specifying an executor</strong> — defaults to the shared common <code>ForkJoinPool</code>, reintroducing the exact common-pool-starvation risk already flagged for parallel streams and Fork-Join; the course's own example deliberately passes an explicit virtual-thread executor to <code>supplyAsync</code> precisely to sidestep this.</li>
+                <li><strong>Calling <code>Subtask.get()</code> before <code>join()</code> has returned, or without checking <code>.state()</code> first</strong> — risks either an exception (if the subtask failed) or, depending on the API/JDK version, undefined/unavailable results for a subtask that hasn't completed — the course's explicit <code>state() == SUCCESS</code> check pattern is the safe idiom.</li>
+                <li><strong>Using base <code>StructuredTaskScope</code> (wait-for-all) when the actual requirement is "stop on first failure" or "stop on first success"</strong> — as directly demonstrated, this wastes real wall-clock time waiting on siblings whose results are already known to be irrelevant; picking the right scope variant for the actual business requirement (need-all-results vs. need-any-one-result vs. need-all-or-bail) is a genuine design decision, not a minor detail.</li>
+                <li><strong>Assuming virtual threads/structured concurrency eliminate the need to think about scaling entirely</strong> — the course's own closing argument is that this reduces (not eliminates) the <em>need</em> for expensive horizontal/vertical cloud scaling for I/O-bound workloads specifically; it does nothing for CPU-bound scaling needs, which still require the Fork-Join/parallel-stream tools from earlier sections, or genuine horizontal scaling for compute-bound load.</li>
+            </ul>
+
+            <h3>Architectural Impact</h3>
+            <ul>
+                <li>The course frames this entire progression — blocking <code>Future</code> → non-blocking <code>CompletableFuture</code> → structured concurrency on virtual threads — as a genuine historical arc in Java concurrency, and structured concurrency's re-embrace of "simple, blocking-looking code" is presented as a direct, deliberate reaction against the debugging/maintainability costs the reactive/async <code>CompletableFuture</code> era introduced, now that virtual threads remove the original <em>reason</em> (platform-thread scarcity) for going async in the first place.</li>
+                <li><strong>This has a real architectural implication for framework and library design</strong>, not just application code: server frameworks (e.g., the course's own mention of Tomcat's traditional ~200-platform-thread request-handling ceiling) can potentially handle far more concurrent requests simply by running request handlers on virtual threads instead of platform threads, without needing to rewrite the framework's programming model to be reactive/non-blocking — a significant simplification path for existing blocking-style web application codebases.</li>
+                <li><strong>The scaling argument is explicitly positioned as an alternative/complement to cloud-provider vertical/horizontal scaling, not a replacement for all scaling strategy</strong> — the course's framing ("maybe we should use structured concurrency and virtual threads <em>before</em> scaling with cloud providers") is specifically about extracting more real capacity out of existing infrastructure for I/O-bound workloads, which is a meaningfully different (and often cheaper) lever than provisioning more cloud instances, but doesn't address CPU-bound scaling needs or eliminate the value of horizontal scaling for other reasons (availability, geographic distribution, fault isolation).</li>
+            </ul>
+
+            <hr>
+
+            <h2 id="interview-questions">5. Interview Questions & Answers</h2>
+            
+            <h3>Basic</h3>
+            <p><strong>Q1: What is the core limitation of <code>Future</code> that motivated the introduction of <code>CompletableFuture</code>?</strong><br>
+            A: A <code>Future</code> provides no way to be notified when its result becomes available or to chain further operations onto it — the only way to retrieve the value is the blocking <code>.get()</code> call, which idles the calling thread (a real cost on platform threads) for the entire wait, and offers no composability for combining results from multiple concurrent operations.</p>
+
+            <p><strong>Q2: What does it mean for two <code>CompletableFuture</code>s to be combined with <code>thenCombine</code>, and why is a <code>BiFunction</code> needed rather than a plain <code>Function</code>?</strong><br>
+            A: <code>thenCombine</code> takes a second, independently-running <code>CompletableFuture</code> and waits for both the original and this second one to complete, then applies a combining function to <em>both</em> results. A <code>BiFunction</code> (two inputs, one output) is needed specifically because there are two separate result values — one from each future — that need to be combined into a single output value.</p>
+
+            <p><strong>Q3: What is the fundamental difference in "shape" between a <code>StructuredTaskScope</code> and an unstructured <code>CompletableFuture</code> chain, in terms of parent/child relationships?</strong><br>
+            A: A <code>StructuredTaskScope</code> establishes an explicit parent/child relationship — the scope is opened, subtasks are forked as its children, and the scope's <code>join()</code> is a single well-defined point where the parent waits for and can react to all children's outcomes (including cancelling siblings on failure or success). An unstructured <code>CompletableFuture</code> chain has no such enforced relationship — a stage's async task can, in principle, keep running detached from whatever originally triggered it, with no structural guarantee that anything is "watching" or will clean it up if the caller no longer cares about the result.</p>
+
+            <h3>Intermediate</h3>
+            <p><strong>Q4: Explain why <code>.join()</code> on a <code>CompletableFuture</code> (or <code>.get()</code> on a <code>Future</code>) was historically discouraged, and why that concern is significantly reduced with virtual threads.</strong><br>
+            A: Both calls block the calling thread until the result is available. On a platform thread, that block ties up a scarce, OS-backed resource for the entire wait — exactly the "idle thread doing nothing but waiting" problem this whole course section is built around solving. With virtual threads, if the calling thread is itself a virtual thread, that same blocking call causes the JVM to unmount the virtual thread from its carrier, freeing the carrier (and its one underlying OS thread) to do other work during the wait — so the <em>logical</em> blocking call remains, but its <em>physical</em> resource cost is dramatically lower, which is precisely why the course argues it's now acceptable to write simpler, blocking-looking code again.</p>
+
+            <p><strong>Q5: When would you choose <code>StructuredTaskScope.ShutdownOnFailure</code> over the base <code>StructuredTaskScope</code>, and give a concrete scenario from the course where the difference in behavior actually matters.</strong><br>
+            A: Choose <code>ShutdownOnFailure</code> whenever the overall operation genuinely needs <em>all</em> forked subtasks' results to proceed, such that a failure in any one subtask makes waiting on the others pointless. The course's own example: a service needing both user data and vehicle data before it can do anything useful — if the user-service call fails, there's no point waiting the remaining several seconds for the vehicle-service call to complete, since the combined operation can't succeed either way; <code>ShutdownOnFailure</code> cancels that now-pointless sibling call immediately rather than wasting the wall-clock time.</p>
+
+            <p><strong>Q6: When would you choose <code>StructuredTaskScope.ShutdownOnSuccess</code> instead, and what happens if the first subtask to complete actually fails rather than succeeds?</strong><br>
+            A: Choose <code>ShutdownOnSuccess</code> for "first valid result wins" scenarios where multiple redundant sources can each independently satisfy the same need — the course's own example of querying multiple weather services for the current temperature, where you only need one successful answer, not all of them. If the first-completing subtask fails rather than succeeds, the scope does <em>not</em> give up — it continues waiting for the remaining subtasks, only surfacing a failure (from <code>.result()</code>) if literally every forked subtask ultimately fails.</p>
+
+            <h3>Advanced</h3>
+            <p><strong>Q7: Explain, mechanically, what a "continuation" is in the JVM's virtual-thread implementation, and connect it to the coroutine model the course introduces alongside it.</strong><br>
+            A: A continuation is an object that captures a suspended execution's stack frames, local variables, and instruction pointer such that calling <code>run</code> on it again resumes execution exactly where a prior <code>yield</code> left off, rather than restarting from the beginning. This directly implements the coroutine model — where a routine can have multiple re-entry points rather than a single entry point and single return — because each <code>yield</code>/re-<code>run</code> pair is precisely a suspend/resume boundary. Virtual threads use this mechanism: when a virtual thread blocks, the JVM effectively calls <code>yield</code> on its underlying continuation (saving its stack state to the heap) and frees the carrier thread; when the blocking operation completes, the JVM calls <code>run</code> again on that continuation (on some available carrier thread, not necessarily the original one), resuming exactly where execution left off.</p>
+
+            <p><strong>Q8: A team has an existing, deeply-chained <code>CompletableFuture</code>-based service (multiple <code>thenCompose</code>/<code>thenApply</code> stages, submitted to the common pool) and is considering migrating it to <code>StructuredTaskScope</code>. What are the concrete benefits they'd gain, and what would they need to change about how the code is structured, not just which API is called?</strong><br>
+            A: They'd gain: (1) explicit parent/child relationships, meaning a failure partway through can automatically cancel now-irrelevant sibling work via <code>ShutdownOnFailure</code>, rather than needing manual <code>.exceptionally()</code> handling scattered across each stage; (2) a debugging/readability improvement, since the scope's fork/join structure in the source code directly mirrors the actual concurrent execution structure, unlike a <code>CompletableFuture</code> chain where the logical flow is spread across separate lambda callbacks; (3) reduced risk of orphaned background work, since a scope's try-with-resources close forces resolution of every forked subtask. The structural change needed isn't just an API swap — chains built around "keep transforming a single flowing result through a pipeline" (the natural <code>CompletableFuture</code> mental model) need to be re-thought as "fork N independent-or-dependent subtasks within an explicit scope, then join and combine," which is a genuinely different way of decomposing the problem, not a drop-in replacement for every <code>thenApply</code>/<code>thenCompose</code> call site.</p>
+
+            <p><strong>Q9: The course argues virtual threads + structured concurrency let a server handle "10 to 100 times more HTTP requests" than platform threads (citing Tomcat's ~200-thread ceiling), framing this as an alternative to cloud-provider vertical/horizontal scaling. What class of scaling problem does this argument <em>not</em> address, and why would a team still need vertical or horizontal scaling even after fully adopting virtual threads?</strong><br>
+            A: This argument specifically addresses <em>I/O-bound</em> concurrency scaling — handling many concurrently-blocked-on-I/O requests without needing a thread (and its OS resources) per request. It does nothing for <em>CPU-bound</em> scaling limits: if a service's bottleneck is actual computation (not waiting on I/O), no amount of virtual threads changes the fact that a fixed number of physical CPU cores can only do so much real work per second — that still requires either genuine parallel computation (Fork-Join/parallel streams, from earlier sections) on more cores, or horizontal scaling (more machines, more cores in aggregate) for CPU-bound load. Additionally, horizontal scaling remains valuable for reasons entirely orthogonal to per-request concurrency efficiency — fault isolation (one instance's crash doesn't take down all traffic), geographic distribution/latency, and availability during deployments — none of which virtual threads address at all.</p>
+
+            <hr>
+
+            <h2 id="mastery-checklist">6. Mastery Checklist</h2>
+            <ul>
+                <li>I can explain why <code>Future.get()</code> blocks the calling thread and why that historically discouraged its use, and can identify the same underlying cost in <code>CompletableFuture.join()</code>/<code>.get()</code>.</li>
+                <li>I can build a basic <code>CompletableFuture</code> chain using <code>supplyAsync</code>, <code>thenCombine</code>, and <code>thenApply</code>, and explain the difference between <code>thenApply</code>/<code>thenCompose</code> (added, since the transcript's part 1 wasn't available — worth double-checking against the actual course material if you get it later).</li>
+                <li>I can explain what "unstructured concurrency" means, name the orphaned-thread risk it creates, and contrast it with structured concurrency's explicit parent/child model.</li>
+                <li>I can write a basic <code>StructuredTaskScope</code> fork/join block, correctly check <code>Subtask.state()</code> before calling <code>.get()</code>, and explain why base <code>StructuredTaskScope</code> waits for every subtask regardless of individual outcomes.</li>
+                <li>I can choose correctly between <code>ShutdownOnFailure</code> (need-all-results) and <code>ShutdownOnSuccess</code> (need-any-one-result) for a given business scenario, and explain the early-cancellation behavior each provides.</li>
+                <li>I can explain what a continuation is and how it mechanically enables virtual thread suspension/resumption, connecting it to the coroutine (multiple entry point) model.</li>
+                <li>I can articulate the scaling argument for virtual threads/structured concurrency precisely — that it addresses I/O-bound concurrency specifically — and correctly identify that CPU-bound scaling and other reasons for horizontal scaling (fault isolation, availability) remain unaddressed by this approach.</li>
+            </ul>
+        </div>
+    </main>
+
+</body>
+</html>
